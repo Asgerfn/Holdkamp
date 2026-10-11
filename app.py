@@ -6508,6 +6508,10 @@ def refresh_admin_teams():
 # ADMIN - SAVE SELECTED DASHBOARD TEAMS
 # =========================================================
 
+# =========================================================
+# ADMIN - SAVE SELECTED DASHBOARD TEAMS
+# =========================================================
+
 @app.route(
     "/admin/teams/save",
     methods=["POST"]
@@ -6518,96 +6522,57 @@ def save_admin_teams():
 
     ensure_dashboard_teams_table()
 
-
-    # =====================================================
-    # SELECTED DATABASE IDS
-    # =====================================================
-
-    selected_ids_raw = (
-        request.form.getlist(
-            "selected_team_ids"
-        )
+    selected_ids_raw = request.form.getlist(
+        "selected_team_ids"
     )
-
 
     selected_ids = []
 
-
     for value in selected_ids_raw:
-
         try:
-
             selected_ids.append(
                 int(value)
             )
-
         except ValueError:
-
             continue
-
-
-    # =====================================================
-    # SAVE ACTIVE STATUS
-    # =====================================================
 
     conn = get_connection()
     cursor = conn.cursor()
 
-
     try:
 
-        # -------------------------------------------------
-        # Disable all teams for club/season
-        # -------------------------------------------------
-
+        # Deactivate all teams for this club/season
         cursor.execute(
             """
             UPDATE dbo.club_dashboard_teams
-
             SET
                 is_active = 0,
-                updated_at =
-                    SYSUTCDATETIME()
-
+                updated_at = SYSUTCDATETIME()
             WHERE
                 club_id = ?
                 AND season_id = ?
             """,
-
             current_user.club_id,
             CURRENT_SEASON
         )
 
-
-        # -------------------------------------------------
         # Activate selected teams
-        # -------------------------------------------------
-
         if selected_ids:
 
             placeholders = ",".join(
-                ["?"] * len(
-                    selected_ids
-                )
+                ["?"] * len(selected_ids)
             )
-
 
             sql = f"""
                 UPDATE dbo.club_dashboard_teams
-
                 SET
                     is_active = 1,
-                    updated_at =
-                        SYSUTCDATETIME()
-
+                    updated_at = SYSUTCDATETIME()
                 WHERE
                     club_id = ?
                     AND season_id = ?
-                    AND id IN (
-                        {placeholders}
-                    )
+                    AND id IN ({placeholders})
             """
-
 
             params = [
                 current_user.club_id,
@@ -6615,780 +6580,33 @@ def save_admin_teams():
                 *selected_ids
             ]
 
-
             cursor.execute(
                 sql,
                 params
             )
 
-
         conn.commit()
 
-
     except Exception:
-
         conn.rollback()
         raise
 
-
     finally:
-
         cursor.close()
         conn.close()
 
-
-    # =====================================================
-    # NOTHING SELECTED
-    # =====================================================
-
-    if not selected_ids:
-
+    if selected_ids:
+        flash(
+            f"Dashboard opdateret. "
+            f"{len(selected_ids)} hold er valgt.",
+            "success"
+        )
+    else:
         flash(
             "Dashboard opdateret. "
             "Ingen hold er valgt.",
             "success"
         )
-
-
-        return redirect(
-            url_for(
-                "admin_dashboard"
-            )
-        )
-
-
-    # =====================================================
-    # SYNC ALL ACTIVE TEAMS
-    # =====================================================
-
-    try:
-
-        result = (
-            sync_club_active_teams(
-                club_id=
-                    current_user.club_id,
-
-                season_id=
-                    CURRENT_SEASON,
-            )
-        )
-
-
-    except Exception as e:
-
-        print()
-        print(
-            "=" * 100
-        )
-
-        print(
-            "FEJL VED KAMPDATA-SYNC"
-        )
-
-        print(
-            "=" * 100
-        )
-
-        print(e)
-
-
-        flash(
-            "Holdvalget blev gemt, "
-            "men kampdata kunne ikke opdateres.",
-            "error"
-        )
-
-
-        return redirect(
-            url_for(
-                "admin_dashboard"
-            )
-        )
-
-
-    # =====================================================
-    # RESULT
-    # =====================================================
-
-    if (
-        result["failed_teams"]
-        or result["failed_matches"]
-    ):
-
-        flash(
-            f"{result['active_teams']} hold er valgt. "
-            f"{result['matches']} holdkampe blev fundet. "
-            f"{result['games']} delkampe blev fundet. "
-            f"Nogle elementer kunne ikke opdateres.",
-            "error"
-        )
-
-
-    else:
-
-        flash(
-            f"{result['active_teams']} hold er valgt. "
-            f"{result['matches']} holdkampe blev opdateret. "
-            f"{result['games']} delkampe blev fundet.",
-            "success"
-        )
-
-
-    return redirect(
-        url_for(
-            "admin_dashboard"
-        )
-    )
-
-@login_required
-@admin_required
-def save_admin_teams():
-
-    ensure_dashboard_teams_table()
-
-
-    # =====================================================
-    # SELECTED DATABASE IDS
-    # =====================================================
-
-    selected_ids_raw = (
-
-        request.form.getlist(
-            "selected_team_ids"
-        )
-
-    )
-
-
-    selected_ids = []
-
-
-    for value in selected_ids_raw:
-
-        try:
-
-            selected_ids.append(
-                int(value)
-            )
-
-        except ValueError:
-
-            continue
-
-
-    # =====================================================
-    # SAVE ACTIVE STATUS
-    # =====================================================
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-
-    try:
-
-        # -------------------------------------------------
-        # Disable all teams
-        # -------------------------------------------------
-
-        cursor.execute(
-            """
-            UPDATE dbo.club_dashboard_teams
-
-            SET
-
-                is_active = 0,
-
-                updated_at =
-                    SYSUTCDATETIME()
-
-            WHERE
-
-                club_id = ?
-
-                AND season_id = ?
-            """,
-
-            current_user.club_id,
-
-            CURRENT_SEASON
-        )
-
-
-        # -------------------------------------------------
-        # Activate selected rows
-        # -------------------------------------------------
-
-        if selected_ids:
-
-            placeholders = ",".join(
-
-                ["?"] * len(
-                    selected_ids
-                )
-
-            )
-
-
-            sql = f"""
-                UPDATE dbo.club_dashboard_teams
-
-                SET
-
-                    is_active = 1,
-
-                    updated_at =
-                        SYSUTCDATETIME()
-
-                WHERE
-
-                    club_id = ?
-
-                    AND season_id = ?
-
-                    AND id IN (
-                        {placeholders}
-                    )
-            """
-
-
-            params = [
-
-                current_user.club_id,
-
-                CURRENT_SEASON,
-
-                *selected_ids
-            ]
-
-
-            cursor.execute(
-                sql,
-                params
-            )
-
-
-        conn.commit()
-
-
-    except Exception:
-
-        conn.rollback()
-
-        raise
-
-
-    finally:
-
-        cursor.close()
-        conn.close()
-
-
-    # =====================================================
-    # NOTHING SELECTED
-    # =====================================================
-
-    if not selected_ids:
-
-        flash(
-            "Dashboard opdateret. "
-            "Ingen hold er valgt.",
-            "success"
-        )
-
-
-        return redirect(
-            url_for("admin_dashboard")
-        )
-
-
-    # =====================================================
-    # READ SELECTED TEAMS
-    # =====================================================
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-
-    try:
-
-        placeholders = ",".join(
-
-            ["?"] * len(
-                selected_ids
-            )
-
-        )
-
-
-        sql = f"""
-            SELECT
-
-                id,
-
-                team_name,
-
-                league_name,
-
-                league_group_id,
-
-                age_group_id,
-
-                region_id,
-
-                league_group_team_id
-
-            FROM dbo.club_dashboard_teams
-
-            WHERE
-
-                club_id = ?
-
-                AND season_id = ?
-
-                AND is_active = 1
-
-                AND id IN (
-                    {placeholders}
-                )
-
-            ORDER BY
-                id
-        """
-
-
-        params = [
-
-            current_user.club_id,
-
-            CURRENT_SEASON,
-
-            *selected_ids
-        ]
-
-
-        cursor.execute(
-            sql,
-            params
-        )
-
-
-        rows = (
-            cursor.fetchall()
-        )
-
-
-        selected_teams = [
-
-            {
-                "id":
-                    row.id,
-
-                "team_name":
-                    row.team_name,
-
-                "league_name":
-                    row.league_name,
-
-                "league_group_id":
-                    row.league_group_id,
-
-                "age_group_id":
-                    row.age_group_id,
-
-                "region_id":
-                    row.region_id,
-
-                "league_group_team_id":
-                    row.league_group_team_id,
-            }
-
-            for row in rows
-        ]
-
-
-    finally:
-
-        cursor.close()
-        conn.close()
-
-
-    # =====================================================
-    # BADMINTONPLAYER SESSION
-    # =====================================================
-
-    try:
-
-        session = create_session()
-
-
-        callback_context = (
-            get_callback_context(
-                session
-            )
-        )
-
-
-    except Exception as e:
-
-        print()
-        print(
-            "Kunne ikke starte "
-            "BadmintonPlayer-sync:"
-        )
-
-        print(e)
-
-
-        flash(
-            "Dashboard-valg blev gemt, "
-            "men kampdata kunne ikke opdateres.",
-            "error"
-        )
-
-
-        return redirect(
-            url_for("admin_dashboard")
-        )
-
-
-    # =====================================================
-    # SYNC SELECTED TEAMS
-    # =====================================================
-
-    all_matches = []
-
-    successful_teams = 0
-
-    failed_teams = []
-
-
-    for team in selected_teams:
-
-        try:
-
-            print()
-            print(
-                "=" * 80
-            )
-
-            print(
-                "Synkroniserer:",
-                team["team_name"],
-                "-",
-                team["league_name"]
-            )
-
-            print(
-                "=" * 80
-            )
-
-
-            # =============================================
-            # AGE GROUP REQUIRED
-            # =============================================
-
-            if team["age_group_id"] is None:
-
-                raise RuntimeError(
-                    "Holdet mangler age_group_id."
-                )
-
-
-            # =============================================
-            # RESOLVE TEAM IDS
-            # =============================================
-
-            ids = resolve_team_ids(
-
-                session=session,
-
-                callback_context=
-                    callback_context,
-
-                club_id=
-                    current_user.club_id,
-
-                season_id=
-                    CURRENT_SEASON,
-
-                league_group_id=
-                    team["league_group_id"],
-
-                age_group_id=
-                    team["age_group_id"],
-
-                team_name=
-                    team["team_name"],
-            )
-
-
-            region_id = (
-                ids["region_id"]
-            )
-
-
-            league_group_team_id = (
-                ids[
-                    "league_group_team_id"
-                ]
-            )
-
-
-            print(
-                "Region ID:",
-                region_id
-            )
-
-
-            print(
-                "League Group Team ID:",
-                league_group_team_id
-            )
-
-
-            # =============================================
-            # SAVE RESOLVED IDS
-            # =============================================
-
-            update_conn = (
-                get_connection()
-            )
-
-            update_cursor = (
-                update_conn.cursor()
-            )
-
-
-            try:
-
-                update_cursor.execute(
-                    """
-                    UPDATE dbo.club_dashboard_teams
-
-                    SET
-
-                        region_id = ?,
-
-                        league_group_team_id = ?,
-
-                        updated_at =
-                            SYSUTCDATETIME()
-
-                    WHERE
-
-                        id = ?
-
-                        AND club_id = ?
-
-                        AND season_id = ?
-                    """,
-
-                    region_id,
-
-                    league_group_team_id,
-
-                    team["id"],
-
-                    current_user.club_id,
-
-                    CURRENT_SEASON
-                )
-
-
-                update_conn.commit()
-
-
-            except Exception:
-
-                update_conn.rollback()
-
-                raise
-
-
-            finally:
-
-                update_cursor.close()
-
-                update_conn.close()
-
-
-            # =============================================
-            # GET TEAM MATCHES
-            # =============================================
-
-            matches = get_team_matches(
-
-                session=session,
-
-                callback_context=
-                    callback_context,
-
-                club_id=
-                    current_user.club_id,
-
-                season_id=
-                    CURRENT_SEASON,
-
-                league_group_id=
-                    team["league_group_id"],
-
-                age_group_id=
-                    team["age_group_id"],
-
-                region_id=
-                    region_id,
-
-                league_group_team_id=
-                    league_group_team_id,
-
-                club_team_name=
-                    team["team_name"],
-
-                league_name=
-                    team["league_name"],
-            )
-
-
-            print(
-                f"Kampe fundet: "
-                f"{len(matches)}"
-            )
-
-
-            all_matches.extend(
-                matches
-            )
-
-
-            successful_teams += 1
-
-
-        except Exception as e:
-
-            print()
-            print(
-                "FEJL VED HOLD:"
-            )
-
-            print(
-                team["team_name"],
-                "-",
-                team["league_name"]
-            )
-
-            print(e)
-
-
-            failed_teams.append(
-                {
-                    "team_name":
-                        team["team_name"],
-
-                    "league_name":
-                        team["league_name"],
-
-                    "error":
-                        str(e)
-                }
-            )
-
-
-    # =====================================================
-    # REMOVE DUPLICATE MATCHES
-    # =====================================================
-
-    unique_matches = {}
-
-
-    for match in all_matches:
-
-        key = (
-            match["club_id"],
-            match["season_id"],
-            match["league_match_id"]
-        )
-
-
-        if key not in unique_matches:
-
-            unique_matches[key] = match
-
-
-    all_matches = list(
-        unique_matches.values()
-    )
-
-
-    # =====================================================
-    # SAVE MATCHES TO AZURE
-    # =====================================================
-
-    if all_matches:
-
-        try:
-
-            print()
-            print(
-                f"Gemmer {len(all_matches)} "
-                f"unikke kampe i Azure..."
-            )
-
-
-            save_matches_to_azure(
-                all_matches
-            )
-
-
-        except Exception as e:
-
-            print()
-            print(
-                "Fejl ved gemning "
-                "af kampe i Azure:"
-            )
-
-            print(e)
-
-
-            flash(
-                "Holdene blev valgt, "
-                "men kampdata kunne ikke "
-                "gemmes i Azure.",
-                "error"
-            )
-
-
-            return redirect(
-                url_for("admin_dashboard")
-            )
-
-
-    # =====================================================
-    # RESULT
-    # =====================================================
-
-    if failed_teams:
-
-        flash(
-            f"Dashboard opdateret. "
-            f"{len(selected_teams)} hold er valgt. "
-            f"{successful_teams} hold blev synkroniseret. "
-            f"{len(failed_teams)} hold fejlede. "
-            f"{len(all_matches)} kampe blev opdateret.",
-            "error"
-        )
-
-
-    else:
-
-        flash(
-            f"Dashboard opdateret. "
-            f"{len(selected_teams)} hold er valgt. "
-            f"{len(all_matches)} kampe blev "
-            f"gemt/opdateret.",
-            "success"
-        )
-
 
     return redirect(
         url_for("admin_dashboard")
