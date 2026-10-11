@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+
+{% block title %}
+Pointsystem
+{% endblock %}
+
+{% block content %}
+
+<style>
+    .points-page {
+        max-width: 1120px;
+        margin: 0 auto;
+    }
+
+    .points-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+        align-items: flex-end;
+        margin-bottom: 28px;
+    }
+
+    .points-header h1 {
+        margin: 4px 0 7px;
+        font-size: 32px;
+    }
+
+    .points-header p {
+        margin: 0;
+        color: var(--muted);
+        max-width: 720px;
+        line-height: 1.6;
+    }
+
+    .points-pill {
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,.09);
+        background: rgba(255,255,255,.04);
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .points-section {
+        border: 1px solid rgba(255,255,255,.08);
+        background: rgba(15,25,40,.78);
+        border-radius: 18px;
+        overflow: hidden;
+        margin-bottom: 18px;
+    }
+
+    .points-section-header {
+        padding: 20px 22px 16px;
+        border-bottom: 1px solid rgba(255,255,255,.07);
+    }
+
+    .points-section-header h2 {
+        margin: 0;
+        font-size: 18px;
+    }
+
+    .points-section-header p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .points-table-wrap {
+        overflow-x: auto;
+    }
+
+    .points-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .points-table th,
+    .points-table td {
+        padding: 15px 22px;
+        text-align: left;
+        border-bottom: 1px solid rgba(255,255,255,.06);
+        vertical-align: middle;
+    }
+
+    .points-table th {
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        font-weight: 800;
+        background: rgba(255,255,255,.018);
+    }
+
+    .points-table tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .points-category {
+        width: 170px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .points-situation {
+        line-height: 1.45;
+    }
+
+    .points-value {
+        width: 110px;
+        text-align: right !important;
+        font-weight: 900;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    .points-positive {
+        color: #7ee2a8;
+    }
+
+    .points-negative {
+        color: #ff9b9b;
+    }
+
+    .points-neutral {
+        color: var(--muted);
+    }
+
+    .captain-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 20px;
+        align-items: center;
+        padding: 22px;
+        border: 1px solid rgba(255,255,255,.08);
+        background: rgba(15,25,40,.78);
+        border-radius: 18px;
+        margin-top: 18px;
+    }
+
+    .captain-card h2 {
+        margin: 0 0 6px;
+        font-size: 18px;
+    }
+
+    .captain-card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+    }
+
+    .captain-multiplier {
+        min-width: 76px;
+        height: 76px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(255,255,255,.05);
+        font-size: 24px;
+        font-weight: 900;
+    }
+
+    .points-note {
+        margin: 18px 2px 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+    }
+
+    @media (max-width: 760px) {
+        .points-header {
+            display: block;
+        }
+
+        .points-pill {
+            display: inline-block;
+            margin-top: 14px;
+        }
+
+        .points-header h1 {
+            font-size: 27px;
+        }
+
+        .points-table th,
+        .points-table td {
+            padding: 13px 14px;
+        }
+
+        .points-category {
+            width: auto;
+        }
+
+        .captain-card {
+            grid-template-columns: 1fr;
+        }
+
+        .captain-multiplier {
+            min-width: 64px;
+            width: 64px;
+            height: 64px;
+        }
+    }
+</style>
+
+<div class="points-page">
+
+    <div class="points-header">
+        <div>
+            <h1>Pointsystem</h1>
+            <p>
+                Her kan du se, hvordan fantasy-point bliver optjent i holdkampe.
+                Grundpoint, bonusser og straffe beregnes ud fra kampens resultat,
+                sætscorer og holdkampens samlede resultat.
+            </p>
+        </div>
+
+        <div class="points-pill">
+            Fantasy-regler
+        </div>
+    </div>
+
+    <section class="points-section">
+        <div class="points-section-header">
+            <h2>Kampresultat</h2>
+            <p>Grundpoint for spillerens individuelle kamp samt walkovers.</p>
+        </div>
+
+        <div class="points-table-wrap">
+            <table class="points-table">
+                <thead>
+                    <tr>
+                        <th>Kategori</th>
+                        <th>Situation</th>
+                        <th class="points-value">Point</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="points-category">Grundpoint</td>
+                        <td class="points-situation">Sejr 2-0</td>
+                        <td class="points-value points-positive">+5</td>
+                    </tr>
+                    <tr>
+                        <td class="points-category">Grundpoint</td>
+                        <td class="points-situation">Sejr 2-1</td>
+                        <td class="points-value points-positive">+4</td>
+                    </tr>
+                    <tr>
+                        <td class="points-category">Grundpoint</td>
+                        <td class="points-situation">Nederlag 1-2</td>
+                        <td class="points-value points-positive">+2</td>
+                    </tr>
+                    <tr>
+                        <td class="points-category">Grundpoint</td>
+                        <td class="points-situation">Nederlag 0-2</td>
+                        <td class="points-value points-positive">+1</td>
+                    </tr>
+                    <tr>
+                        <td class="points-category">Walkover</td>
+                        <td class="points-situation">W.O.-sejr</td>
+                        <td class="points-value points-positive">+1</td>
+                    </tr>
+                    <tr>
+                        <td class="points-category">Walkover</td>
+                        <td class="points-situation">W.O.-nederlag</td>
+                        <td class="points-value points-neutral">0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="points-section">
+        <div class="points-section-header">
+            <h2>Sætbonus og sætstraf</h2>
+            <p>Ekstra point eller straf afhængigt af scoren i det enkelte sæt.</p>
+        </div>
+
+        <div class="points-table-wrap">
+            <table class="points-table">
+                <thead>
+                    <tr>
+                        <th>Kategori</th>
+                        <th>Situation</th>
+                        <th class="points-value">Point</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="points-category">Sætbonus</td>
+                        <td class="points-situation">Vinder sæt, modstander får 0-5</td>
+                        <td class="points-value points-positive">+4</td>
+                    </tr>
+                    <tr>
+                        <td class="points-category">Sætbonus</td>
+                        <td class="points-situation">Vinder sæt, modstander får 6-8</td>
+                        <td class="points-value points-positive">+2</td>
+                    </tr>
+                    <tr>
+                        <td class="points-category">Sætstraf</td>
+                        <td class="points-situation">Taber sæt og får selv 0-5</td>
+                        <td class="points-value points-negative">-4</td>
+                    </tr>
+                    <tr>
+                        <td class="points-category">Sætstraf</td>
+                        <td class="points-situation">Taber sæt og får selv 6-8</td>
+                        <td class="points-value points-negative">-2</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="points-section">
+        <div class="points-section-header">
+            <h2>Kampbonusser</h2>
+            <p>Bonusser for lange kampe og sæt, der når 21 point.</p>
+        </div>
+
+        <div class="points-table-wrap">
+            <table class="points-table">
+                <thead>
+                    <tr>
+                        <th>Kategori</th>
+                        <th>Situation</th>
+                        <th class="points-value">Point</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="points-category">Lang kamp</td>
+                        <td class="points-situation">2 sæt og mindst 60 spillede point i alt</td>
+                        <td class="points-value points-positive">+2</td>
+                    </tr>
+                    <tr>
+                        <td class="points-category">Lang kamp</td>
+                        <td class="points-situation">3 sæt og mindst 80 spillede point i alt</td>
+                        <td class="points-value points-positive">+2</td>
+                    </tr>
+                    <tr>
+                        <td class="points-category">21-point bonus</td>
+                        <td class="points-situation">Mindst ét sæt når 21 point</td>
+                        <td class="points-value points-positive">+1</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="points-section">
+        <div class="points-section-header">
+            <h2>Holdbonus og hero bonus</h2>
+            <p>Point baseret på det samlede resultat af holdkampen.</p>
+        </div>
+
+        <div class="points-table-wrap">
+            <table class="points-table">
+                <thead>
+                    <tr>
+                        <th>Kategori</th>
+                        <th>Situation</th>
+                        <th class="points-value">Point</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="points-category">Holdbonus</td>
+                        <td class="points-situation">Holdet vinder holdkampen</td>
+                        <td class="points-value points-positive">+1</td>
+                    </tr>
+                    <tr>
+                        <td class="points-category">Holdbonus</td>
+                        <td class="points-situation">Holdet vinder 13-0</td>
+                        <td class="points-value points-positive">+3 ekstra</td>
+                    </tr>
+                    <tr>
+                        <td class="points-category">Holdstraf</td>
+                        <td class="points-situation">Holdet taber 0-13</td>
+                        <td class="points-value points-negative">-3</td>
+                    </tr>
+                    <tr>
+                        <td class="points-category">Hero bonus</td>
+                        <td class="points-situation">Holdet taber 1-12, og spilleren er med i eneste sejr</td>
+                        <td class="points-value points-positive">+4</td>
+                    </tr>
+                    <tr>
+                        <td class="points-category">Hero bonus</td>
+                        <td class="points-situation">Holdet taber 2-11, og spilleren er med i begge sejre</td>
+                        <td class="points-value points-positive">+3</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="captain-card">
+        <div>
+            <h2>Kaptajn</h2>
+            <p>
+                Kaptajnens samlede point tæller dobbelt på managerholdet.
+            </p>
+        </div>
+
+        <div class="captain-multiplier">
+            ×2
+        </div>
+    </div>
+
+    <p class="points-note">
+        Pointsystemet gælder fantasy-point for den aktuelle sæson.
+        Bonusser og straffe kan påvirke den samme kamp, når deres betingelser er opfyldt.
+    </p>
+
+</div>
+
+{% endblock %}

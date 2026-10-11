@@ -35,6 +35,13 @@ from werkzeug.security import (
 
 from database import get_connection
 
+from captain_changes import (
+    ensure_captain_change_table,
+    count_used_substitutions,
+    record_captain_change,
+    change_team_captain,
+)
+
 
 from badmintonplayer import (
     get_club_teams,
@@ -1778,6 +1785,8 @@ def my_team():
 
 
 
+    ensure_captain_change_table()
+
     conn = get_connection()
 
     cursor = conn.cursor()
@@ -2483,9 +2492,100 @@ def my_team():
                 "save",
                 "activate",
                 "substitute",
+                "change_captain",
             }:
 
                 action = "save"
+
+
+            # =====================================================
+            # CAPTAIN CHANGE
+            # =====================================================
+
+            if action == "change_captain":
+
+                if (
+                    team is None
+                    or
+                    team["status"] != "active"
+                ):
+                    flash(
+                        "Kaptajnen kan kun ændres "
+                        "på et aktivt hold.",
+                        "error"
+                    )
+
+                    return redirect(
+                        url_for("my_team")
+                    )
+
+                new_captain_id = (
+                    request.form
+                    .get(
+                        "new_captain_id",
+                        ""
+                    )
+                    .strip()
+                )
+
+                if not new_captain_id:
+                    flash(
+                        "Du skal vælge en ny kaptajn.",
+                        "error"
+                    )
+
+                    return redirect(
+                        url_for("my_team")
+                    )
+
+                try:
+                    captain_result = (
+                        change_team_captain(
+                            cursor=cursor,
+                            fantasy_team_id=
+                                team["id"],
+                            new_captain_badminton_id=
+                                new_captain_id,
+                            max_substitutions=
+                                rules[
+                                    "max_substitutions"
+                                ],
+                        )
+                    )
+
+                    conn.commit()
+
+                except ValueError as e:
+                    conn.rollback()
+
+                    flash(
+                        str(e),
+                        "error"
+                    )
+
+                    return redirect(
+                        url_for("my_team")
+                    )
+
+                except Exception:
+                    conn.rollback()
+                    raise
+
+                flash(
+                    f"Kaptajnen er ændret fra "
+                    f"{captain_result['old_captain_name']} "
+                    f"til "
+                    f"{captain_result['new_captain_name']}. "
+                    f"Du har nu brugt "
+                    f"{captain_result['substitutions_used']} af "
+                    f"{rules['max_substitutions']} "
+                    f"udskiftninger.",
+                    "success"
+                )
+
+                return redirect(
+                    url_for("my_team")
+                )
 
 
             # =====================================================
@@ -2521,21 +2621,12 @@ def my_team():
                 # CHECK NUMBER OF SUBSTITUTIONS
                 # -------------------------------------------------
 
-                cursor.execute(
-                    """
-                    SELECT COUNT(*)
-
-                    FROM dbo.fantasy_team_substitutions
-
-                    WHERE
-                        fantasy_team_id = ?
-                    """,
-                    team["id"]
-                )
-
-
                 substitutions_used_now = (
-                    cursor.fetchone()[0]
+                    count_used_substitutions(
+                        cursor=cursor,
+                        fantasy_team_id=
+                            team["id"],
+                    )
                 )
 
 
@@ -2886,6 +2977,27 @@ def my_team():
 
                     substitution_id
                 )
+
+
+                # -------------------------------------------------
+                # CAPTAIN HISTORY
+                # -------------------------------------------------
+
+                if outgoing_row.is_captain:
+
+                    record_captain_change(
+                        cursor=cursor,
+                        fantasy_team_id=
+                            team["id"],
+                        old_captain_badminton_id=
+                            player_out_id,
+                        new_captain_badminton_id=
+                            player_in_id,
+                        effective_at=
+                            effective_at,
+                        counts_as_substitution=
+                            False,
+                    )
 
 
                 # -------------------------------------------------
@@ -4204,38 +4316,12 @@ def my_team():
 
 
 
-            cursor.execute(
-
-                """
-
-                SELECT
-
-                    COUNT(*)
-
-
-
-                FROM dbo.fantasy_team_substitutions
-
-
-
-                WHERE
-
-                    fantasy_team_id = ?
-
-                """,
-
-                team["id"]
-
-            )
-
-
-
-
-
             substitutions_used = (
-
-                cursor.fetchone()[0]
-
+                count_used_substitutions(
+                    cursor=cursor,
+                    fantasy_team_id=
+                        team["id"],
+                )
             )
 
 
@@ -4391,6 +4477,8 @@ def search_clubs():
 @app.route("/statistics")
 @login_required
 def statistics():
+
+    ensure_captain_change_table()
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -5208,12 +5296,21 @@ def statistics():
             OUTER APPLY (
 
                 SELECT
-                    COUNT(*) AS substitution_count
-
-                FROM dbo.fantasy_team_substitutions fts
-
-                WHERE
-                    fts.fantasy_team_id = ft.id
+                    (
+                        SELECT COUNT(*)
+                        FROM dbo.fantasy_team_substitutions fts
+                        WHERE
+                            fts.fantasy_team_id = ft.id
+                    )
+                    +
+                    (
+                        SELECT COUNT(*)
+                        FROM dbo.fantasy_team_captain_changes ftcc
+                        WHERE
+                            ftcc.fantasy_team_id = ft.id
+                            AND ftcc.counts_as_substitution = 1
+                    )
+                    AS substitution_count
 
             ) sc
 
@@ -5675,13 +5772,14 @@ def dashboard():
         # FANTASY TEAM LEADERBOARD
         # =================================================
         #
-        # Denne første version beregner stillingen ud fra den
-        # nuværende aktive trup på hvert hold og giver kaptajnen
-        # den multiplier, som admin har sat.
+        # Point beregnes kun for den periode, hvor spilleren
+        # faktisk var aktiv på fantasy-holdet.
         #
-        # Når vi senere vil gøre historiske udskiftninger 100 %
-        # præcise, skal point-events kobles til selve kampdatoen
-        # og sammenholdes med active_from / active_to.
+        # Det betyder:
+        # - gamle point beholdes efter en udskiftning
+        # - udskiftede spillere stopper med at optjene point
+        # - nye spillere får ingen point fra før de kom på holdet
+        # - nye spillere optjener point fra deres active_from
         # =================================================
 
         cursor.execute(
@@ -5697,7 +5795,10 @@ def dashboard():
                         *
                         CASE
                             WHEN ftp.is_captain = 1
-                                THEN COALESCE(ftr.captain_multiplier, 2.00)
+                                THEN COALESCE(
+                                    ftr.captain_multiplier,
+                                    2.00
+                                )
                             ELSE 1.00
                         END
                     ),
@@ -5715,18 +5816,37 @@ def dashboard():
 
             LEFT JOIN dbo.fantasy_team_players ftp
                 ON ftp.fantasy_team_id = ft.id
-                AND ftp.active_to IS NULL
 
             OUTER APPLY (
                 SELECT
-                    COALESCE(SUM(fpe.points), 0) AS player_points
+                    COALESCE(
+                        SUM(fpe.points),
+                        0
+                    ) AS player_points
 
                 FROM dbo.fantasy_point_events fpe
 
+                INNER JOIN dbo.club_matches cm
+                    ON cm.id = fpe.club_match_id
+
                 WHERE
-                    fpe.badminton_id = ftp.badminton_id
-                    AND fpe.club_id = ft.club_id
-                    AND fpe.season_id = ft.season_id
+                    fpe.badminton_id =
+                        ftp.badminton_id
+
+                    AND fpe.club_id =
+                        ft.club_id
+
+                    AND fpe.season_id =
+                        ft.season_id
+
+                    AND cm.match_time >=
+                        ftp.active_from
+
+                    AND (
+                        ftp.active_to IS NULL
+                        OR cm.match_time <
+                            ftp.active_to
+                    )
             ) pp
 
             WHERE
@@ -5748,6 +5868,53 @@ def dashboard():
         )
 
         fantasy_team_rows = cursor.fetchall()
+
+
+        # =================================================
+        # CURRENT PLAYERS ON EACH ACTIVE FANTASY TEAM
+        # =================================================
+        #
+        # Used by the dashboard dropdown so users can inspect
+        # each other's current team and captain.
+        # =================================================
+
+        cursor.execute(
+            """
+            SELECT
+                ftp.fantasy_team_id,
+                p.badminton_id,
+                p.player_name,
+                p.gender,
+                ftp.is_captain
+
+            FROM dbo.fantasy_team_players ftp
+
+            INNER JOIN dbo.fantasy_teams ft
+                ON ft.id = ftp.fantasy_team_id
+
+            INNER JOIN dbo.badminton_players p
+                ON p.badminton_id = ftp.badminton_id
+
+            WHERE
+                ft.club_id = ?
+                AND ft.season_id = ?
+                AND ft.status = 'active'
+                AND ftp.active_to IS NULL
+
+            ORDER BY
+                ftp.fantasy_team_id,
+                CASE
+                    WHEN p.gender = 'M' THEN 0
+                    WHEN p.gender = 'K' THEN 1
+                    ELSE 2
+                END,
+                p.player_name
+            """,
+            current_user.club_id,
+            CURRENT_SEASON
+        )
+
+        fantasy_team_player_rows = cursor.fetchall()
 
 
     finally:
@@ -5842,12 +6009,49 @@ def dashboard():
     # FANTASY TEAM LEADERBOARD
     # =====================================================
 
+    fantasy_team_players = {}
+
+    for row in fantasy_team_player_rows:
+
+        fantasy_team_players.setdefault(
+            int(row.fantasy_team_id),
+            []
+        ).append(
+            {
+                "badminton_id":
+                    row.badminton_id,
+
+                "player_name":
+                    row.player_name,
+
+                "gender":
+                    row.gender,
+
+                "is_captain":
+                    bool(row.is_captain),
+            }
+        )
+
+
     fantasy_leaderboard = [
         {
-            "id": row.id,
-            "team_name": row.team_name,
-            "owner_name": row.owner_name,
-            "points": float(row.team_points or 0),
+            "id":
+                row.id,
+
+            "team_name":
+                row.team_name,
+
+            "owner_name":
+                row.owner_name,
+
+            "points":
+                float(row.team_points or 0),
+
+            "players":
+                fantasy_team_players.get(
+                    int(row.id),
+                    []
+                ),
         }
         for row in fantasy_team_rows
     ]
@@ -5863,6 +6067,392 @@ def dashboard():
         top_men=top_men,
         top_women=top_women,
         current_season=CURRENT_SEASON,
+    )
+
+
+# =========================================================
+# ADMIN - FANTASY TEAMS
+# =========================================================
+
+@app.route("/admin/fantasy-teams")
+@login_required
+@admin_required
+def admin_fantasy_teams():
+
+    ensure_captain_change_table()
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+
+        cursor.execute(
+            """
+            SELECT
+                club_id,
+                club_name
+
+            FROM dbo.badminton_clubs
+
+            WHERE club_id = ?
+            """,
+            current_user.club_id,
+        )
+
+        club_row = cursor.fetchone()
+
+        if club_row is None:
+            abort(404)
+
+        club = {
+            "id": club_row.club_id,
+            "name": club_row.club_name,
+        }
+
+        cursor.execute(
+            """
+            SELECT
+                ft.id,
+                ft.team_name,
+                ft.status,
+                ft.activated_at,
+                ft.created_at,
+
+                u.display_name AS owner_name,
+                u.email AS owner_email,
+
+                (
+                    SELECT COUNT(*)
+                    FROM dbo.fantasy_team_players ftp
+                    WHERE
+                        ftp.fantasy_team_id = ft.id
+                        AND ftp.active_to IS NULL
+                ) AS active_players,
+
+                (
+                    SELECT COUNT(*)
+                    FROM dbo.fantasy_team_substitutions fts
+                    WHERE
+                        fts.fantasy_team_id = ft.id
+                ) AS player_substitutions,
+
+                (
+                    SELECT COUNT(*)
+                    FROM dbo.fantasy_team_captain_changes ftcc
+                    WHERE
+                        ftcc.fantasy_team_id = ft.id
+                        AND ftcc.counts_as_substitution = 1
+                ) AS captain_substitutions
+
+            FROM dbo.fantasy_teams ft
+
+            INNER JOIN dbo.users u
+                ON u.user_id = ft.user_id
+
+            WHERE
+                ft.club_id = ?
+                AND ft.season_id = ?
+
+            ORDER BY
+                CASE
+                    WHEN ft.status = 'active' THEN 0
+                    ELSE 1
+                END,
+                ft.team_name ASC
+            """,
+            current_user.club_id,
+            CURRENT_SEASON,
+        )
+
+        rows = cursor.fetchall()
+
+        teams = [
+            {
+                "id": row.id,
+                "team_name": row.team_name,
+                "status": row.status,
+                "activated_at": row.activated_at,
+                "created_at": row.created_at,
+                "owner_name": row.owner_name,
+                "owner_email": row.owner_email,
+                "active_players": int(
+                    row.active_players or 0
+                ),
+                "substitutions_used": int(
+                    (row.player_substitutions or 0)
+                    +
+                    (row.captain_substitutions or 0)
+                ),
+            }
+            for row in rows
+        ]
+
+
+        # =================================================
+        # CLUB USERS / ADMINS
+        # =================================================
+
+        cursor.execute(
+            """
+            SELECT
+                user_id,
+                display_name,
+                email,
+                club_role,
+                created_at
+
+            FROM dbo.users
+
+            WHERE club_id = ?
+
+            ORDER BY
+                CASE
+                    WHEN club_role = 'admin' THEN 0
+                    ELSE 1
+                END,
+                display_name ASC
+            """,
+            current_user.club_id,
+        )
+
+        user_rows = cursor.fetchall()
+
+        users = [
+            {
+                "user_id":
+                    int(row.user_id),
+
+                "display_name":
+                    row.display_name,
+
+                "email":
+                    row.email,
+
+                "club_role":
+                    row.club_role,
+
+                "created_at":
+                    row.created_at,
+            }
+            for row in user_rows
+        ]
+
+    finally:
+        cursor.close()
+        conn.close()
+
+    return render_template(
+        "admin_fantasy_teams.html",
+        club=club,
+        teams=teams,
+        users=users,
+        current_season=CURRENT_SEASON,
+    )
+
+
+
+@app.route(
+    "/admin/users/<int:user_id>/make-admin",
+    methods=["POST"],
+)
+@login_required
+@admin_required
+def admin_make_user_admin(
+    user_id,
+):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+
+        # -------------------------------------------------
+        # The user must belong to the same club as the
+        # administrator making the change.
+        # -------------------------------------------------
+
+        cursor.execute(
+            """
+            SELECT
+                user_id,
+                display_name,
+                club_role
+
+            FROM dbo.users
+
+            WHERE
+                user_id = ?
+                AND club_id = ?
+            """,
+            user_id,
+            current_user.club_id,
+        )
+
+        user = cursor.fetchone()
+
+        if user is None:
+            abort(404)
+
+        display_name = user.display_name
+
+        if user.club_role == "admin":
+
+            conn.rollback()
+
+            flash(
+                f"{display_name} er allerede administrator.",
+                "success",
+            )
+
+            return redirect(
+                url_for("admin_fantasy_teams")
+            )
+
+        cursor.execute(
+            """
+            UPDATE dbo.users
+
+            SET club_role = 'admin'
+
+            WHERE
+                user_id = ?
+                AND club_id = ?
+            """,
+            user_id,
+            current_user.club_id,
+        )
+
+        conn.commit()
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        cursor.close()
+        conn.close()
+
+    flash(
+        f"{display_name} er nu administrator.",
+        "success",
+    )
+
+    return redirect(
+        url_for("admin_fantasy_teams")
+    )
+
+
+@app.route(
+    "/admin/fantasy-teams/<int:fantasy_team_id>/delete",
+    methods=["POST"],
+)
+@login_required
+@admin_required
+def admin_delete_fantasy_team(
+    fantasy_team_id,
+):
+
+    ensure_captain_change_table()
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+
+        # -------------------------------------------------
+        # Verify that the team belongs to this admin's club
+        # and current season.
+        # -------------------------------------------------
+
+        cursor.execute(
+            """
+            SELECT
+                id,
+                team_name
+
+            FROM dbo.fantasy_teams
+
+            WHERE
+                id = ?
+                AND club_id = ?
+                AND season_id = ?
+            """,
+            fantasy_team_id,
+            current_user.club_id,
+            CURRENT_SEASON,
+        )
+
+        team = cursor.fetchone()
+
+        if team is None:
+            abort(404)
+
+        team_name = team.team_name
+
+        # -------------------------------------------------
+        # Delete dependent fantasy-team history first.
+        #
+        # We do this explicitly rather than relying on
+        # cascade rules, so the behaviour is predictable
+        # across the existing database schema.
+        # -------------------------------------------------
+
+        cursor.execute(
+            """
+            DELETE FROM dbo.fantasy_team_captain_changes
+            WHERE fantasy_team_id = ?
+            """,
+            fantasy_team_id,
+        )
+
+        # fantasy_team_players may reference substitution rows,
+        # so players are removed before substitutions.
+        cursor.execute(
+            """
+            DELETE FROM dbo.fantasy_team_players
+            WHERE fantasy_team_id = ?
+            """,
+            fantasy_team_id,
+        )
+
+        cursor.execute(
+            """
+            DELETE FROM dbo.fantasy_team_substitutions
+            WHERE fantasy_team_id = ?
+            """,
+            fantasy_team_id,
+        )
+
+        cursor.execute(
+            """
+            DELETE FROM dbo.fantasy_teams
+            WHERE
+                id = ?
+                AND club_id = ?
+                AND season_id = ?
+            """,
+            fantasy_team_id,
+            current_user.club_id,
+            CURRENT_SEASON,
+        )
+
+        conn.commit()
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        cursor.close()
+        conn.close()
+
+    flash(
+        f'Fantasyholdet "{team_name}" er slettet.',
+        "success",
+    )
+
+    return redirect(
+        url_for("admin_fantasy_teams")
     )
 
 
@@ -6511,7 +7101,15 @@ def refresh_admin_teams():
 # =========================================================
 # ADMIN - SAVE SELECTED DASHBOARD TEAMS
 # =========================================================
-
+# =========================================================
+# POINTSYSTEM
+# =========================================================
+@login_required
+@app.route("/pointsystem")
+def pointsystem():
+    return render_template(
+        "pointsystem.html"
+    )
 @app.route(
     "/admin/teams/save",
     methods=["POST"]

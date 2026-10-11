@@ -1,0 +1,589 @@
+{% extends "base.html" %}
+
+{% block title %}
+Admin · Fantasyhold · {{ club.name }}
+{% endblock %}
+
+{% block content %}
+
+<section class="admin-header">
+    <div>
+        <span class="eyebrow">
+            Klubadministration
+        </span>
+
+        <h1>
+            {{ club.name }}
+        </h1>
+
+        <p>
+            Administrér klubbens fantasyhold.
+        </p>
+    </div>
+</section>
+
+
+<nav
+    aria-label="Admin navigation"
+    style="
+        display: flex;
+        gap: 8px;
+        margin: 0 0 24px 0;
+        flex-wrap: wrap;
+    "
+>
+    <a
+        href="{{ url_for('admin_dashboard') }}"
+        class="ghost-button compact"
+        style="text-decoration: none;"
+    >
+        Oversigt
+    </a>
+
+    <a
+        href="{{ url_for('admin_fantasy_teams') }}"
+        class="primary-button"
+        style="text-decoration: none;"
+    >
+        Fantasyhold
+    </a>
+</nav>
+
+
+<section class="admin-stats">
+
+    <article class="admin-stat">
+        <span>
+            Fantasyhold
+        </span>
+
+        <strong>
+            {{ teams | length }}
+        </strong>
+    </article>
+
+    <article class="admin-stat">
+        <span>
+            Aktive
+        </span>
+
+        <strong>
+            {{
+                teams
+                | selectattr("status", "equalto", "active")
+                | list
+                | length
+            }}
+        </strong>
+    </article>
+
+    <article class="admin-stat">
+        <span>
+            Sæson
+        </span>
+
+        <strong>
+            {{ current_season }}
+        </strong>
+    </article>
+
+</section>
+
+
+<section
+    class="members-card"
+    style="margin-top: 24px;"
+>
+
+    <div class="section-heading">
+
+        <div>
+            <span class="card-kicker">
+                FANTASYHOLD
+            </span>
+
+            <h2>
+                Oprettede hold
+            </h2>
+
+            <p
+                style="
+                    color: var(--muted);
+                    font-size: 12px;
+                    margin-bottom: 0;
+                "
+            >
+                Her kan administratorer permanent slette et fantasyhold.
+            </p>
+        </div>
+
+    </div>
+
+
+    {% if not teams %}
+
+        <div
+            style="
+                padding: 50px 0;
+                text-align: center;
+                color: var(--muted);
+            "
+        >
+            Der er endnu ingen fantasyhold i sæson {{ current_season }}.
+        </div>
+
+    {% else %}
+
+        <div class="fantasy-admin-list">
+
+            {% for team in teams %}
+
+                <article class="fantasy-admin-row">
+
+                    <div class="fantasy-admin-main">
+
+                        <div class="fantasy-admin-title-row">
+
+                            <strong>
+                                {{ team.team_name }}
+                            </strong>
+
+                            {% if team.status == "active" %}
+                                <span class="role-badge admin">
+                                    Aktiv
+                                </span>
+                            {% else %}
+                                <span class="role-badge">
+                                    Kladde
+                                </span>
+                            {% endif %}
+
+                        </div>
+
+
+                        <div class="fantasy-admin-owner">
+                            {{ team.owner_name }}
+                            ·
+                            {{ team.owner_email }}
+                        </div>
+
+
+                        <div class="fantasy-admin-meta">
+
+                            <span>
+                                {{ team.active_players }} aktive spillere
+                            </span>
+
+                            <span>
+                                {{ team.substitutions_used }} udskiftninger brugt
+                            </span>
+
+                            {% if team.activated_at %}
+                                <span>
+                                    Aktiveret
+                                    {{ team.activated_at.strftime("%d.%m.%Y") }}
+                                </span>
+                            {% else %}
+                                <span>
+                                    Oprettet
+                                    {{ team.created_at.strftime("%d.%m.%Y") }}
+                                </span>
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+
+                    <form
+                        method="POST"
+                        action="{{
+                            url_for(
+                                'admin_delete_fantasy_team',
+                                fantasy_team_id=team.id
+                            )
+                        }}"
+                        class="delete-fantasy-team-form"
+                        data-team-name="{{ team.team_name }}"
+                    >
+                        <button
+                            type="submit"
+                            class="fantasy-delete-button"
+                        >
+                            Slet hold
+                        </button>
+                    </form>
+
+                </article>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+</section>
+
+
+<section
+    class="members-card"
+    style="margin-top: 24px;"
+>
+
+    <div class="section-heading">
+
+        <div>
+
+            <span class="card-kicker">
+                BRUGERE
+            </span>
+
+            <h2>
+                Administratorer
+            </h2>
+
+            <p
+                style="
+                    color: var(--muted);
+                    font-size: 12px;
+                    margin-bottom: 0;
+                "
+            >
+                Giv andre brugere i klubben administratoradgang.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="admin-user-list">
+
+        {% for user in users %}
+
+            <div class="admin-user-row">
+
+                <div class="admin-user-avatar">
+                    {{ user.display_name[:1] | upper }}
+                </div>
+
+
+                <div class="admin-user-info">
+
+                    <div class="admin-user-name">
+
+                        <strong>
+                            {{ user.display_name }}
+                        </strong>
+
+                        {% if user.user_id|string == current_user.id|string %}
+
+                            <span class="you">
+                                Dig
+                            </span>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <span>
+                        {{ user.email }}
+                    </span>
+
+                </div>
+
+
+                <div class="admin-user-actions">
+
+                    {% if user.club_role == "admin" %}
+
+                        <span class="role-badge admin">
+                            Admin
+                        </span>
+
+                    {% else %}
+
+                        <span class="role-badge">
+                            Medlem
+                        </span>
+
+
+                        <form
+                            method="POST"
+                            action="{{
+                                url_for(
+                                    'admin_make_user_admin',
+                                    user_id=user.user_id
+                                )
+                            }}"
+                            class="make-admin-form"
+                            data-user-name="{{ user.display_name }}"
+                        >
+
+                            <button
+                                type="submit"
+                                class="make-admin-button"
+                            >
+                                Gør til admin
+                            </button>
+
+                        </form>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        {% endfor %}
+
+    </div>
+
+</section>
+
+
+<style>
+
+.fantasy-admin-list {
+    display: grid;
+    gap: 10px;
+}
+
+.fantasy-admin-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.fantasy-admin-row:last-child {
+    border-bottom: 0;
+}
+
+.fantasy-admin-main {
+    min-width: 0;
+}
+
+.fantasy-admin-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.fantasy-admin-owner {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 5px;
+    overflow-wrap: anywhere;
+}
+
+.fantasy-admin-meta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 8px;
+}
+
+.fantasy-delete-button {
+    appearance: none;
+    border: 1px solid rgba(239, 68, 68, .42);
+    background: rgba(239, 68, 68, .10);
+    color: #ef4444;
+    border-radius: 10px;
+    padding: 9px 12px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.fantasy-delete-button:hover {
+    background: rgba(239, 68, 68, .17);
+    border-color: rgba(239, 68, 68, .62);
+}
+
+
+.admin-user-list {
+    display: grid;
+}
+
+.admin-user-row {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    min-height: 68px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.admin-user-row:last-child {
+    border-bottom: 0;
+}
+
+.admin-user-avatar {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    background: rgba(94, 234, 212, .08);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.admin-user-info {
+    min-width: 0;
+}
+
+.admin-user-info > span {
+    display: block;
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.admin-user-name {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+
+.admin-user-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 9px;
+    flex-wrap: wrap;
+}
+
+.make-admin-button {
+    appearance: none;
+    border: 1px solid rgba(94, 234, 212, .25);
+    background: rgba(94, 234, 212, .08);
+    color: var(--accent);
+    border-radius: 10px;
+    padding: 9px 12px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.make-admin-button:hover {
+    background: rgba(94, 234, 212, .14);
+    border-color: rgba(94, 234, 212, .42);
+}
+
+@media (max-width: 700px) {
+
+    .fantasy-admin-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .delete-fantasy-team-form {
+        width: 100%;
+    }
+
+    .fantasy-delete-button {
+        width: 100%;
+    }
+
+    .admin-user-row {
+        grid-template-columns: 42px minmax(0, 1fr);
+    }
+
+    .admin-user-actions {
+        grid-column: 1 / -1;
+        justify-content: stretch;
+    }
+
+    .make-admin-form,
+    .make-admin-button {
+        width: 100%;
+    }
+
+}
+
+</style>
+
+
+<script>
+
+document
+    .querySelectorAll(
+        ".make-admin-form"
+    )
+    .forEach(form => {
+
+        form.addEventListener(
+            "submit",
+            event => {
+
+                const userName =
+                    form.dataset.userName
+                    || "denne bruger";
+
+                const confirmed =
+                    window.confirm(
+                        `Gør ${userName} til administrator?\n\n`
+                        + "Brugeren får adgang til klubbens "
+                        + "admin-funktioner."
+                    );
+
+                if (!confirmed) {
+                    event.preventDefault();
+                }
+
+            }
+        );
+
+    });
+
+
+document
+    .querySelectorAll(
+        ".delete-fantasy-team-form"
+    )
+    .forEach(form => {
+
+        form.addEventListener(
+            "submit",
+            event => {
+
+                const teamName =
+                    form.dataset.teamName
+                    || "dette hold";
+
+                const confirmed =
+                    window.confirm(
+                        `Slet "${teamName}" permanent?\n\n`
+                        + "Holdet, spillerhistorikken og "
+                        + "udskiftningerne bliver slettet. "
+                        + "Dette kan ikke fortrydes."
+                    );
+
+                if (!confirmed) {
+                    event.preventDefault();
+                }
+
+            }
+        );
+
+    });
+
+</script>
+
+{% endblock %}

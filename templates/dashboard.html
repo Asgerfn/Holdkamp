@@ -1,826 +1,1733 @@
 {% extends "base.html" %}
 
+
+
 {% block title %}
+
 Dashboard · Holdkamp
+
 {% endblock %}
+
+
 
 {% block content %}
 
+
+
 <style>
+
     .dashboard-tabs {
+
         display: flex;
+
         gap: 8px;
+
         margin-bottom: 26px;
+
         padding: 5px;
+
         width: fit-content;
+
         max-width: 100%;
+
         border: 1px solid rgba(255, 255, 255, 0.08);
+
         border-radius: 14px;
+
         background: rgba(255, 255, 255, 0.025);
+
     }
 
+
+
     .dashboard-tab {
+
         appearance: none;
+
         border: 0;
+
         border-radius: 10px;
+
         padding: 10px 15px;
+
         background: transparent;
+
         color: var(--muted);
+
         font: inherit;
+
         font-size: 13px;
+
         font-weight: 800;
+
         cursor: pointer;
+
         transition: 0.18s ease;
+
+        white-space: nowrap;
+
+    }
+
+
+
+    .dashboard-tab:hover {
+
+        color: var(--text);
+
+        background: rgba(255, 255, 255, 0.04);
+
+    }
+
+
+
+    .dashboard-tab.is-active {
+
+        color: var(--accent);
+
+        background: rgba(94, 234, 212, 0.10);
+
+    }
+
+
+
+    .dashboard-tab-panel[hidden] {
+
+        display: none;
+
+    }
+
+
+
+    .leaderboard-list,
+
+    .player-leader-list {
+
+        display: grid;
+
+        gap: 10px;
+
+    }
+
+
+
+    .leaderboard-row,
+
+    .player-leader-row {
+
+        display: grid;
+
+        align-items: center;
+
+        gap: 14px;
+
+        min-height: 62px;
+
+        padding: 12px 14px;
+
+        border: 1px solid rgba(255, 255, 255, 0.08);
+
+        border-radius: 14px;
+
+        background: rgba(255, 255, 255, 0.035);
+
+    }
+
+
+
+    .leaderboard-row {
+
+        grid-template-columns: 42px minmax(0, 1fr) auto;
+
+    }
+
+
+
+    .player-leader-row {
+
+        grid-template-columns: 36px minmax(0, 1fr) auto;
+
+        min-height: 56px;
+
+    }
+
+
+
+    .leaderboard-rank,
+
+    .player-leader-rank {
+
+        display: grid;
+
+        place-items: center;
+
+        width: 36px;
+
+        height: 36px;
+
+        border-radius: 11px;
+
+        background: rgba(94, 234, 212, 0.08);
+
+        color: var(--accent);
+
+        font-weight: 900;
+
+        font-size: 13px;
+
+    }
+
+
+
+    .leaderboard-copy,
+
+    .player-leader-copy {
+
+        min-width: 0;
+
+    }
+
+
+
+    .leaderboard-copy strong,
+
+    .player-leader-copy strong {
+
+        display: block;
+
+        overflow: hidden;
+
+        text-overflow: ellipsis;
+
+        white-space: nowrap;
+
+    }
+
+
+
+    .leaderboard-copy small,
+
+    .player-leader-copy small {
+
+        display: block;
+
+        margin-top: 3px;
+
+        color: var(--muted);
+
+    }
+
+
+
+    .leaderboard-points,
+
+    .player-leader-points {
+
+        font-weight: 900;
+
+        color: var(--text);
+
+        white-space: nowrap;
+
+    }
+
+
+
+    .leaderboard-row:first-child {
+
+        border-color: rgba(94, 234, 212, 0.20);
+
+        background: rgba(94, 234, 212, 0.055);
+
+    }
+
+
+
+    .player-leaders-grid {
+
+        display: grid;
+
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+
+        gap: 18px;
+
+    }
+
+
+
+    .player-leader-column {
+
+        min-width: 0;
+
+    }
+
+
+
+    .player-leader-column h3 {
+
+        margin: 0 0 12px;
+
+        font-size: 15px;
+
+    }
+
+
+
+    .dashboard-empty-state {
+
+        padding: 34px 20px;
+
+        border: 1px dashed rgba(255, 255, 255, 0.10);
+
+        border-radius: 14px;
+
+        text-align: center;
+
+        color: var(--muted);
+
+    }
+
+
+    /* =====================================================
+       FANTASY TEAM DROPDOWN
+       ===================================================== */
+
+    .fantasy-team-entry {
+        display: grid;
+        gap: 8px;
+    }
+
+    .fantasy-team-toggle {
+        width: 100%;
+        color: var(--text);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .fantasy-team-toggle:hover {
+        border-color: rgba(94, 234, 212, 0.18);
+        background: rgba(94, 234, 212, 0.045);
+    }
+
+    .fantasy-team-toggle:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+    }
+
+    .fantasy-team-toggle-side {
+        display: flex;
+        align-items: center;
+        gap: 10px;
         white-space: nowrap;
     }
 
-    .dashboard-tab:hover {
-        color: var(--text);
+    .fantasy-team-arrow {
+        display: inline-grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 8px;
+        color: var(--muted);
         background: rgba(255, 255, 255, 0.04);
+        transition: transform 0.18s ease;
     }
 
-    .dashboard-tab.is-active {
-        color: var(--accent);
-        background: rgba(94, 234, 212, 0.10);
+    .fantasy-team-toggle[aria-expanded="true"]
+    .fantasy-team-arrow {
+        transform: rotate(180deg);
     }
 
-    .dashboard-tab-panel[hidden] {
+    .fantasy-team-roster[hidden] {
         display: none;
     }
 
-    .leaderboard-list,
-    .player-leader-list {
-        display: grid;
-        gap: 10px;
+    .fantasy-team-roster {
+        margin: -2px 0 2px 56px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.022);
     }
 
-    .leaderboard-row,
-    .player-leader-row {
-        display: grid;
+    .fantasy-team-player {
+        display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: 14px;
-        min-height: 62px;
-        padding: 12px 14px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.035);
+        min-height: 38px;
+        padding: 7px 4px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.055);
     }
 
-    .leaderboard-row {
-        grid-template-columns: 42px minmax(0, 1fr) auto;
+    .fantasy-team-player:last-child {
+        border-bottom: 0;
     }
 
-    .player-leader-row {
-        grid-template-columns: 36px minmax(0, 1fr) auto;
-        min-height: 56px;
-    }
-
-    .leaderboard-rank,
-    .player-leader-rank {
-        display: grid;
-        place-items: center;
-        width: 36px;
-        height: 36px;
-        border-radius: 11px;
-        background: rgba(94, 234, 212, 0.08);
-        color: var(--accent);
-        font-weight: 900;
-        font-size: 13px;
-    }
-
-    .leaderboard-copy,
-    .player-leader-copy {
+    .fantasy-player-copy {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         min-width: 0;
     }
 
-    .leaderboard-copy strong,
-    .player-leader-copy strong {
-        display: block;
+    .fantasy-player-name {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        font-size: 13px;
+        font-weight: 700;
     }
 
-    .leaderboard-copy small,
-    .player-leader-copy small {
-        display: block;
-        margin-top: 3px;
+    .fantasy-player-gender {
+        flex: 0 0 auto;
         color: var(--muted);
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
-    .leaderboard-points,
-    .player-leader-points {
+    .fantasy-captain-badge {
+        flex: 0 0 auto;
+        padding: 5px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(94, 234, 212, 0.20);
+        background: rgba(94, 234, 212, 0.08);
+        color: var(--accent);
+        font-size: 10px;
         font-weight: 900;
-        color: var(--text);
         white-space: nowrap;
     }
 
-    .leaderboard-row:first-child {
-        border-color: rgba(94, 234, 212, 0.20);
-        background: rgba(94, 234, 212, 0.055);
-    }
-
-    .player-leaders-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 18px;
-    }
-
-    .player-leader-column {
-        min-width: 0;
-    }
-
-    .player-leader-column h3 {
-        margin: 0 0 12px;
-        font-size: 15px;
-    }
-
-    .dashboard-empty-state {
-        padding: 34px 20px;
-        border: 1px dashed rgba(255, 255, 255, 0.10);
-        border-radius: 14px;
-        text-align: center;
+    .fantasy-team-empty {
+        padding: 8px 4px;
         color: var(--muted);
+        font-size: 12px;
+    }
+
+
+
+    @media (max-width: 760px) {
+
+        .dashboard-tabs {
+
+            width: 100%;
+
+            overflow-x: auto;
+
+        }
+
+
+
+        .dashboard-tab {
+
+            flex: 1 0 auto;
+
+        }
+
+
+
+        .player-leaders-grid {
+
+            grid-template-columns: 1fr;
+
+        }
+
+
+
+        .fantasy-team-roster {
+            margin-left: 0;
+        }
+
+
+
+        .leaderboard-row {
+            gap: 10px;
+        }
+
+
+
+        .fantasy-team-toggle-side {
+            gap: 6px;
+        }
+
+    }
+
+
+    /* =====================================================
+       SIMPLER / WIDER FRONT PAGE
+       ===================================================== */
+
+    .dashboard-welcome {
+        margin: 12px 0 22px;
+        max-width: 900px;
+    }
+
+    .dashboard-welcome h1 {
+        margin: 12px 0 6px;
+        font-size: clamp(30px, 4vw, 46px);
+        line-height: 1.05;
+        letter-spacing: -0.03em;
+    }
+
+    .dashboard-welcome p {
+        margin: 0;
+        max-width: 760px;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.6;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 0 !important;
+    }
+
+    .dashboard-card-large {
+        width: 100%;
+        grid-column: 1 / -1;
+        min-width: 0;
+        padding: 28px;
+    }
+
+    .leaderboard-row {
+        min-height: 72px;
+        padding: 14px 16px;
     }
 
     @media (max-width: 760px) {
-        .dashboard-tabs {
-            width: 100%;
-            overflow-x: auto;
+        .dashboard-card-large {
+            padding: 18px;
         }
 
-        .dashboard-tab {
-            flex: 1 0 auto;
+        .dashboard-welcome h1 {
+            font-size: 30px;
         }
 
-        .player-leaders-grid {
-            grid-template-columns: 1fr;
+        .dashboard-welcome p {
+            font-size: 14px;
         }
     }
+
 </style>
 
+
+
 <!-- =====================================================
-     HERO
+     COMPACT WELCOME
      ===================================================== -->
 
-<section class="dashboard-hero">
-
-    <div>
-
-        <span class="pill">
-            DIN KLUB
-        </span>
-
-        {% if club %}
-
-            <h1>
-                {{ club.name }}
-            </h1>
-
-            <p>
-                Velkommen tilbage, {{ current_user.display_name }}.
-            </p>
-
-        {% else %}
-
-            <h1>
-                Klub ikke fundet
-            </h1>
-
-            <p>
-                Vi kunne ikke finde klubben tilknyttet din profil.
-            </p>
-
-        {% endif %}
-
-    </div>
+<section class="dashboard-welcome">
 
     {% if club %}
 
-        <div class="club-badge">
+        <span class="pill">
+            {{ club.name }} · FANTASY {{ current_season }}
+        </span>
 
-            <span class="club-badge-label">
-                KLUB-ID
-            </span>
+    {% else %}
 
-            <strong>
-                {{ club.id }}
-            </strong>
-
-        </div>
+        <span class="pill">
+            FANTASY {{ current_season }}
+        </span>
 
     {% endif %}
 
+    <h1>
+        Velkommen tilbage, {{ current_user.display_name.split(" ")[0] }}.
+    </h1>
+
+    <p>
+        Se stillingen, snus i konkurrenternes hold og følg pointene gennem sæsonen.
+    </p>
+
 </section>
+
 
 
 <!-- =====================================================
+
      DASHBOARD GRID
+
      ===================================================== -->
+
+
 
 <section class="dashboard-grid">
 
+
+
     <!-- =================================================
+
          LEFT CARD WITH THREE TABS
+
          ================================================= -->
+
+
 
     <article class="dashboard-card dashboard-card-large">
 
+
+
         <div class="dashboard-tabs" role="tablist" aria-label="Dashboard faner">
 
+
+
             <button
+
                 type="button"
+
                 class="dashboard-tab is-active"
+
                 data-dashboard-tab="fantasy"
+
                 role="tab"
+
                 aria-selected="true"
+
             >
+
                 Fantasyhold
+
             </button>
 
+
+
             <button
+
                 type="button"
+
                 class="dashboard-tab"
+
                 data-dashboard-tab="players"
+
                 role="tab"
+
                 aria-selected="false"
+
             >
+
                 Spillere
+
             </button>
 
+
+
             <button
+
                 type="button"
+
                 class="dashboard-tab"
+
                 data-dashboard-tab="matches"
+
                 role="tab"
+
                 aria-selected="false"
+
             >
+
                 Holdkampe
+
             </button>
+
+
 
         </div>
 
 
+
+
+
         <!-- =============================================
+
              TAB 1: FANTASY LEADERBOARD
+
              ============================================= -->
 
+
+
         <div
+
             class="dashboard-tab-panel"
+
             data-dashboard-panel="fantasy"
+
             role="tabpanel"
+
         >
+
+
 
             <div class="card-top">
 
+
+
                 <div>
+
                     <span class="card-kicker">
+
                         FANTASY MANAGER
+
                     </span>
+
+
 
                     <h2>
+
                         Stilling
+
                     </h2>
+
                 </div>
 
+
+
                 {% if fantasy_team_count > 0 %}
+
                     <span class="status-pill">
+
                         {{ fantasy_team_count }} hold
+
                     </span>
+
                 {% else %}
+
                     <span class="status-pill">
+
                         Ingen hold
+
                     </span>
+
                 {% endif %}
+
+
 
             </div>
 
+
+
             <p class="card-copy">
+
                 Hvem fører klubbens fantasy manager lige nu.
+
             </p>
+
+
 
             {% if fantasy_leaderboard %}
 
+
+
                 <div class="leaderboard-list">
+
+
 
                     {% for fantasy_team in fantasy_leaderboard %}
 
-                        <div class="leaderboard-row">
 
-                            <span class="leaderboard-rank">
-                                {{ loop.index }}
-                            </span>
 
-                            <div class="leaderboard-copy">
-                                <strong>
-                                    {{ fantasy_team.team_name }}
-                                </strong>
+                        <div class="fantasy-team-entry">
 
-                                <small>
-                                    {{ fantasy_team.owner_name }}
-                                </small>
+
+
+                            <button
+                                type="button"
+                                class="leaderboard-row fantasy-team-toggle"
+                                aria-expanded="false"
+                                aria-controls="fantasy-team-{{ fantasy_team.id }}"
+                            >
+
+
+
+                                <span class="leaderboard-rank">
+
+                                    {{ loop.index }}
+
+                                </span>
+
+
+
+                                <span class="leaderboard-copy">
+
+                                    <strong>
+
+                                        {{ fantasy_team.team_name }}
+
+                                    </strong>
+
+
+
+                                    <small>
+
+                                        {{ fantasy_team.owner_name }}
+
+                                    </small>
+
+                                </span>
+
+
+
+                                <span class="fantasy-team-toggle-side">
+
+                                    <span class="leaderboard-points">
+
+                                        {{ fantasy_team.points | round(1) | int if fantasy_team.points == (fantasy_team.points | int) else fantasy_team.points | round(1) }} p
+
+                                    </span>
+
+
+
+                                    <span
+                                        class="fantasy-team-arrow"
+                                        aria-hidden="true"
+                                    >
+                                        ⌄
+                                    </span>
+
+                                </span>
+
+
+
+                            </button>
+
+
+
+                            <div
+                                id="fantasy-team-{{ fantasy_team.id }}"
+                                class="fantasy-team-roster"
+                                hidden
+                            >
+
+
+
+                                {% for player in fantasy_team.players %}
+
+
+
+                                    <div class="fantasy-team-player">
+
+
+
+                                        <div class="fantasy-player-copy">
+
+                                            <span class="fantasy-player-name">
+
+                                                {{ player.player_name }}
+
+                                            </span>
+
+
+
+                                            {% if player.gender == "M" %}
+
+                                                <span class="fantasy-player-gender">
+                                                    Herre
+                                                </span>
+
+                                            {% elif player.gender == "K" %}
+
+                                                <span class="fantasy-player-gender">
+                                                    Dame
+                                                </span>
+
+                                            {% endif %}
+
+                                        </div>
+
+
+
+                                        {% if player.is_captain %}
+
+                                            <span class="fantasy-captain-badge">
+
+                                                Kaptajn ×2
+
+                                            </span>
+
+                                        {% endif %}
+
+
+
+                                    </div>
+
+
+
+                                {% else %}
+
+
+
+                                    <div class="fantasy-team-empty">
+
+                                        Ingen aktive spillere på holdet.
+
+                                    </div>
+
+
+
+                                {% endfor %}
+
+
+
                             </div>
 
-                            <span class="leaderboard-points">
-                                {{ fantasy_team.points | round(1) | int if fantasy_team.points == (fantasy_team.points | int) else fantasy_team.points | round(1) }} p
-                            </span>
+
 
                         </div>
 
+
+
                     {% endfor %}
 
+
+
                 </div>
+
+
 
             {% else %}
 
+
+
                 <div class="dashboard-empty-state">
+
                     Der er endnu ingen aktive fantasyhold i klubben.
+
                 </div>
 
+
+
             {% endif %}
+
+
 
         </div>
 
 
+
+
+
         <!-- =============================================
+
              TAB 2: TOP PLAYERS
+
              ============================================= -->
 
+
+
         <div
+
             class="dashboard-tab-panel"
+
             data-dashboard-panel="players"
+
             role="tabpanel"
+
             hidden
+
         >
+
+
 
             <div class="card-top">
 
+
+
                 <div>
+
                     <span class="card-kicker">
+
                         SPILLERE
+
                     </span>
 
+
+
                     <h2>
+
                         Top 5
+
                     </h2>
+
                 </div>
 
+
+
                 <span class="status-pill">
+
                     Fantasy point
+
                 </span>
+
+
 
             </div>
 
+
+
             <p class="card-copy">
+
                 De fem bedst scorende herrer og damer i sæson {{ current_season }}.
+
             </p>
+
+
 
             <div class="player-leaders-grid">
 
+
+
                 <div class="player-leader-column">
 
+
+
                     <h3>
+
                         Herrer
+
                     </h3>
+
+
 
                     {% if top_men %}
 
+
+
                         <div class="player-leader-list">
+
+
 
                             {% for player in top_men %}
 
+
+
                                 <div class="player-leader-row">
 
+
+
                                     <span class="player-leader-rank">
+
                                         {{ loop.index }}
+
                                     </span>
+
+
 
                                     <div class="player-leader-copy">
+
                                         <strong>
+
                                             {{ player.player_name }}
+
                                         </strong>
+
                                     </div>
 
+
+
                                     <span class="player-leader-points">
+
                                         {{ player.points }} p
+
                                     </span>
+
+
 
                                 </div>
 
+
+
                             {% endfor %}
 
+
+
                         </div>
+
+
 
                     {% else %}
 
+
+
                         <div class="dashboard-empty-state">
+
                             Ingen herrepoint endnu.
+
                         </div>
+
+
 
                     {% endif %}
 
+
+
                 </div>
+
+
+
 
 
                 <div class="player-leader-column">
 
+
+
                     <h3>
+
                         Damer
+
                     </h3>
+
+
 
                     {% if top_women %}
 
+
+
                         <div class="player-leader-list">
+
+
 
                             {% for player in top_women %}
 
+
+
                                 <div class="player-leader-row">
 
+
+
                                     <span class="player-leader-rank">
+
                                         {{ loop.index }}
+
                                     </span>
+
+
 
                                     <div class="player-leader-copy">
+
                                         <strong>
+
                                             {{ player.player_name }}
+
                                         </strong>
+
                                     </div>
 
+
+
                                     <span class="player-leader-points">
+
                                         {{ player.points }} p
+
                                     </span>
 
+
+
                                 </div>
+
+
 
                             {% endfor %}
 
+
+
                         </div>
+
+
 
                     {% else %}
 
+
+
                         <div class="dashboard-empty-state">
+
                             Ingen damepoint endnu.
+
                         </div>
+
+
 
                     {% endif %}
 
+
+
                 </div>
+
+
 
             </div>
 
+
+
         </div>
+
+
+
 
 
         <!-- =============================================
+
              TAB 3: EXISTING TEAM MATCH OVERVIEW
+
              ============================================= -->
 
+
+
         <div
+
             class="dashboard-tab-panel"
+
             data-dashboard-panel="matches"
+
             role="tabpanel"
+
             hidden
+
         >
+
+
 
             <div class="card-top">
 
+
+
                 <div>
 
+
+
                     <span class="card-kicker">
+
                         HOLDKAMPE
+
                     </span>
 
+
+
                     <h2>
+
                         Dine hold
+
                     </h2>
+
+
 
                 </div>
 
+
+
                 {% if team_count > 0 %}
 
+
+
                     <span class="status-pill">
+
                         {{ team_count }} hold
+
                     </span>
+
+
 
                 {% else %}
 
+
+
                     <span class="status-pill">
+
                         Ingen hold
+
                     </span>
+
+
 
                 {% endif %}
 
+
+
             </div>
+
+
 
             <p class="card-copy">
 
+
+
                 {% if team_count > 0 %}
 
+
+
                     De hold og rækker som klubben har valgt
+
                     til holdkampsoverblikket.
+
+
 
                 {% else %}
 
+
+
                     Der er endnu ikke valgt nogen hold til
+
                     klubbens dashboard.
 
+
+
                 {% endif %}
+
+
 
             </p>
 
+
+
             <div class="fake-list">
+
+
 
                 {% if team_count > 0 %}
 
+
+
                     {% set counter = namespace(value=0) %}
 
+
+
                     <!-- UNGDOM -->
+
                     {% for sub_department, teams in grouped_teams["U"].items() %}
+
+
 
                         {% for team in teams %}
 
+
+
                             {% set counter.value = counter.value + 1 %}
+
+
 
                             <div class="fake-row">
 
+
+
                                 <span class="fake-rank">
+
                                     {{ counter.value }}
+
                                 </span>
+
+
 
                                 <div>
+
                                     <strong>
+
                                         {{ team.team_name }}
+
                                     </strong>
 
+
+
                                     <small>
+
                                         {{ team.league_name }}
+
                                     </small>
+
                                 </div>
 
+
+
                                 <span class="skeleton-chip">
+
                                     {{ sub_department }}
+
                                 </span>
 
+
+
                             </div>
+
+
 
                         {% endfor %}
 
+
+
                     {% endfor %}
+
+
+
 
 
                     <!-- SENIOR -->
+
                     {% for team in grouped_teams["SEN"] %}
+
+
 
                         {% set counter.value = counter.value + 1 %}
 
+
+
                         <div class="fake-row">
 
+
+
                             <span class="fake-rank">
+
                                 {{ counter.value }}
+
                             </span>
+
+
 
                             <div>
+
                                 <strong>
+
                                     {{ team.team_name }}
+
                                 </strong>
 
+
+
                                 <small>
+
                                     {{ team.league_name }}
+
                                 </small>
+
                             </div>
 
+
+
                             <span class="skeleton-chip">
+
                                 SEN
+
                             </span>
+
+
 
                         </div>
 
+
+
                     {% endfor %}
+
+
+
 
 
                     <!-- MOTIONIST -->
+
                     {% for team in grouped_teams["MOT"] %}
+
+
 
                         {% set counter.value = counter.value + 1 %}
 
+
+
                         <div class="fake-row">
 
+
+
                             <span class="fake-rank">
+
                                 {{ counter.value }}
+
                             </span>
+
+
 
                             <div>
+
                                 <strong>
+
                                     {{ team.team_name }}
+
                                 </strong>
 
+
+
                                 <small>
+
                                     {{ team.league_name }}
+
                                 </small>
+
                             </div>
 
+
+
                             <span class="skeleton-chip">
+
                                 MOT
+
                             </span>
+
+
 
                         </div>
 
+
+
                     {% endfor %}
+
+
+
 
 
                     <!-- VETERAN -->
+
                     {% for team in grouped_teams["VET"] %}
+
+
 
                         {% set counter.value = counter.value + 1 %}
 
+
+
                         <div class="fake-row">
 
+
+
                             <span class="fake-rank">
+
                                 {{ counter.value }}
+
                             </span>
+
+
 
                             <div>
+
                                 <strong>
+
                                     {{ team.team_name }}
+
                                 </strong>
 
+
+
                                 <small>
+
                                     {{ team.league_name }}
+
                                 </small>
+
                             </div>
 
+
+
                             <span class="skeleton-chip">
+
                                 VET
+
                             </span>
 
+
+
                         </div>
+
+
 
                     {% endfor %}
 
+
+
                 {% else %}
+
+
 
                     <div class="fake-row muted-row">
 
+
+
                         <span class="fake-rank">
+
                             —
+
                         </span>
+
+
 
                         <div>
 
+
+
                             <strong>
+
                                 Ingen hold valgt endnu
+
                             </strong>
+
+
 
                             <small>
 
+
+
                                 {% if current_user.club_role == "admin" %}
+
                                     Vælg klubbens hold under Admin.
+
                                 {% else %}
+
                                     Klubbens administrator vælger,
+
                                     hvilke hold der skal vises her.
+
                                 {% endif %}
+
+
 
                             </small>
 
+
+
                         </div>
+
+
 
                         {% if current_user.club_role == "admin" %}
 
+
+
                             <a
+
                                 href="{{ url_for('admin_dashboard') }}"
+
                                 class="skeleton-chip"
+
                             >
+
                                 Admin
+
                             </a>
+
+
 
                         {% endif %}
 
+
+
                     </div>
+
+
 
                 {% endif %}
 
+
+
             </div>
+
+
 
         </div>
 
-    </article>
 
-
-    <!-- =================================================
-         PROFILE
-         ================================================= -->
-
-    <article class="dashboard-card profile-card">
-
-        <span class="card-kicker">
-            PROFIL
-        </span>
-
-        <div class="profile-avatar-large">
-            {{ current_user.display_name[:1] | upper }}
-        </div>
-
-        <h2>
-            {{ current_user.display_name }}
-        </h2>
-
-        <p>
-            {{ current_user.email }}
-        </p>
-
-        {% if club %}
-
-            <div class="profile-meta">
-                <span>
-                    Klub
-                </span>
-
-                <strong>
-                    {{ club.name }}
-                </strong>
-            </div>
-
-        {% endif %}
 
     </article>
 
 
-    <!-- =================================================
-         UPCOMING MATCHES
-         ================================================= -->
-
-    <article class="dashboard-card stat-card">
-
-        <span class="stat-number">
-            —
-        </span>
-
-        <span class="stat-label">
-            Kommende kampe
-        </span>
-
-        <small>
-            Aktiveres med kampdata
-        </small>
-
-    </article>
 
 
-    <!-- =================================================
-         ACTIVE TEAMS
-         ================================================= -->
 
-    <article class="dashboard-card stat-card">
-
-        <span class="stat-number">
-
-            {% if team_count > 0 %}
-                {{ team_count }}
-            {% else %}
-                —
-            {% endif %}
-
-        </span>
-
-        <span class="stat-label">
-            Aktive hold
-        </span>
-
-        <small>
-
-            {% if team_count > 0 %}
-                Valgt af klubadministrator
-            {% else %}
-                Ingen hold valgt endnu
-            {% endif %}
-
-        </small>
-
-    </article>
 
 </section>
 
+
 <script>
+
     document.addEventListener("DOMContentLoaded", function () {
+
         const tabs = document.querySelectorAll("[data-dashboard-tab]");
+
         const panels = document.querySelectorAll("[data-dashboard-panel]");
 
+
+
         tabs.forEach(function (tab) {
+
             tab.addEventListener("click", function () {
+
                 const target = tab.dataset.dashboardTab;
 
+
+
                 tabs.forEach(function (item) {
+
                     const isActive = item === tab;
+
                     item.classList.toggle("is-active", isActive);
+
                     item.setAttribute("aria-selected", isActive ? "true" : "false");
+
                 });
 
+
+
                 panels.forEach(function (panel) {
+
                     panel.hidden = panel.dataset.dashboardPanel !== target;
+
                 });
+
             });
+
         });
+
+
+
+        const fantasyTeamToggles = document.querySelectorAll(
+            ".fantasy-team-toggle"
+        );
+
+
+
+        fantasyTeamToggles.forEach(function (toggle) {
+
+            toggle.addEventListener("click", function () {
+
+                const targetId =
+                    toggle.getAttribute("aria-controls");
+
+                const roster =
+                    document.getElementById(targetId);
+
+
+
+                if (!roster) {
+                    return;
+                }
+
+
+
+                const isOpen =
+                    toggle.getAttribute("aria-expanded")
+                    === "true";
+
+
+
+                toggle.setAttribute(
+                    "aria-expanded",
+                    isOpen ? "false" : "true"
+                );
+
+
+
+                roster.hidden = isOpen;
+
+            });
+
+        });
+
     });
+
 </script>
+
+
 
 {% endblock %}
