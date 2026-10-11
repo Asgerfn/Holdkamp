@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="da">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Find din badmintonklub</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+</head>
+
+<body>
+
+    <main class="container">
+
+        <div class="hero">
+
+            <h1>Find din klub</h1>
+
+            <p>
+                Søg efter din badmintonklub for at se hold,
+                kampe og resultater.
+            </p>
+
+            <div class="search-wrapper">
+
+                <input
+                    id="club-search"
+                    type="text"
+                    placeholder="Søg efter klub..."
+                    autocomplete="off"
+                >
+
+                <div
+                    id="club-results"
+                    class="results"
+                ></div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+<script>
+
+const searchInput =
+    document.getElementById("club-search");
+
+const resultsBox =
+    document.getElementById("club-results");
+
+let searchTimeout;
+
+
+searchInput.addEventListener("input", function () {
+
+    clearTimeout(searchTimeout);
+
+    const query = this.value.trim();
+
+    if (query.length < 1) {
+
+        resultsBox.innerHTML = "";
+        resultsBox.style.display = "none";
+
+        return;
+    }
+
+
+    searchTimeout = setTimeout(async () => {
+
+        try {
+
+            const response = await fetch(
+                `/api/clubs?q=${encodeURIComponent(query)}`
+            );
+
+            const clubs = await response.json();
+
+            showResults(clubs);
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Fejl ved klub-søgning:",
+                error
+            );
+
+        }
+
+    }, 150);
+
+});
+
+
+function showResults(clubs) {
+
+    resultsBox.innerHTML = "";
+
+    if (clubs.length === 0) {
+
+        resultsBox.innerHTML = `
+            <div class="no-result">
+                Ingen klubber fundet
+            </div>
+        `;
+
+        resultsBox.style.display = "block";
+
+        return;
+    }
+
+
+    clubs.forEach(club => {
+
+        const item =
+            document.createElement("div");
+
+        item.className = "club-result";
+
+        item.innerHTML = `
+            <span>${club.name}</span>
+        `;
+
+        item.addEventListener(
+            "click",
+            () => {
+
+                window.location.href =
+                    `/club/${club.id}`;
+
+            }
+        );
+
+        resultsBox.appendChild(item);
+
+    });
+
+
+    resultsBox.style.display = "block";
+}
+
+
+document.addEventListener(
+    "click",
+    function(event) {
+
+        if (
+            !event.target.closest(
+                ".search-wrapper"
+            )
+        ) {
+
+            resultsBox.style.display =
+                "none";
+
+        }
+
+    }
+);
+
+</script>
+
+</body>
+
+</html>

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Log ind · Holdkamp{% endblock %}
+
+{% block content %}
+<section class="auth-layout">
+    <div class="auth-showcase">
+        <div>
+            <span class="pill">DIN KLUB. DIT HOLD. DINE KAMPE.</span>
+            <h1>Alt om holdkamp<br><span>samlet ét sted.</span></h1>
+            <p class="hero-copy">
+                Følg din klub, dine hold og kommende kampe uden at lede rundt.
+                Du vælger klub én gang — resten klarer systemet.
+            </p>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <span class="feature-icon">01</span>
+                <div>
+                    <strong>Din klub først</strong>
+                    <p>Appen åbner direkte på den klub, du er tilknyttet.</p>
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <span class="feature-icon">02</span>
+                <div>
+                    <strong>Hold & kampe</strong>
+                    <p>Klubbens holdkampe bliver næste lag i appen.</p>
+                </div>
+            </div>
+
+            <div class="feature-card wide">
+                <span class="feature-icon">03</span>
+                <div>
+                    <strong>Bygget til mobilen</strong>
+                    <p>Designet til at være hurtigt at bruge i hallen, på farten og hjemme.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="auth-panel">
+        <div class="auth-card">
+            <div class="auth-card-head">
+                <span class="eyebrow">VELKOMMEN TILBAGE</span>
+                <h2>Log ind</h2>
+                <p>Brug din profil for at fortsætte til din klub.</p>
+            </div>
+
+            <form method="POST" class="auth-form">
+                <label class="field">
+                    <span>Email</span>
+                    <input
+                        type="email"
+                        name="email"
+                        placeholder="navn@email.dk"
+                        autocomplete="email"
+                        required
+                    >
+                </label>
+
+                <label class="field">
+                    <span>Password</span>
+                    <input
+                        type="password"
+                        name="password"
+                        placeholder="Dit password"
+                        autocomplete="current-password"
+                        required
+                    >
+                </label>
+
+                <button class="primary-button" type="submit">
+                    <span>Log ind</span>
+                    <span class="button-arrow">→</span>
+                </button>
+            </form>
+
+            <div class="auth-divider">
+                <span></span>
+                <small>Ny her?</small>
+                <span></span>
+            </div>
+
+            <a class="secondary-button" href="{{ url_for('register') }}">
+                Opret profil
+            </a>
+
+            <p class="fine-print">
+                Din klub tilknyttes din profil, så du ikke skal søge efter den hver gang.
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,732 @@
+{% extends "base.html" %}
+
+{% block title %}
+Spillere · {{ club.name if club else "Holdkamp" }}
+{% endblock %}
+
+
+{% block content %}
+
+
+<section class="players-header">
+
+    <div>
+
+        <span class="eyebrow">
+            KLUBSPILLERE
+        </span>
+
+        <h1>
+            Spillere
+        </h1>
+
+        {% if club %}
+
+        <p>
+            {{ club.name }}
+            ·
+            {{ player_count }} spillere
+        </p>
+
+        {% endif %}
+
+    </div>
+
+
+    <div class="players-count">
+
+        <span>
+            SÆSON
+        </span>
+
+        <strong>
+            {{ current_season }}
+        </strong>
+
+    </div>
+
+</section>
+
+
+
+<section class="players-card">
+
+
+    <!-- =================================================
+         SEARCH
+         ================================================= -->
+
+    <div class="players-toolbar">
+
+        <div class="player-search">
+
+            <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+            >
+                <circle
+                    cx="11"
+                    cy="11"
+                    r="7"
+                    stroke="currentColor"
+                    stroke-width="2"
+                />
+
+                <path
+                    d="M20 20L16.5 16.5"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                />
+            </svg>
+
+
+            <input
+                id="playerSearch"
+                type="search"
+                placeholder="Søg efter spiller, BadmintonID eller række..."
+                autocomplete="off"
+            >
+
+        </div>
+
+
+        <div class="visible-count">
+
+            <strong id="visiblePlayerCount">
+                {{ player_count }}
+            </strong>
+
+            <span>
+                spillere
+            </span>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =================================================
+         TABLE
+         ================================================= -->
+
+    <div class="players-table-wrap">
+
+        <table class="players-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>
+                        #
+                    </th>
+
+                    <th>
+                        Spiller
+                    </th>
+
+                    <th>
+                        Række
+                    </th>
+
+                    <th class="numeric">
+                        National
+                    </th>
+
+                    <th class="numeric">
+                        Point
+                    </th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody id="playersTableBody">
+
+
+                {% for player in players %}
+
+                <tr
+                    class="player-row"
+
+                    data-search="
+                        {{ player.player_name }}
+                        {{ player.badminton_id }}
+                        {{ player.ranking_class or '' }}
+                    "
+                >
+
+
+                    <td class="player-position">
+
+                        {% if player.ranking_position %}
+
+                            {{ player.ranking_position }}
+
+                        {% else %}
+
+                            —
+
+                        {% endif %}
+
+                    </td>
+
+
+
+                    <td>
+
+                        <div class="player-info">
+
+                            <div class="player-list-avatar">
+
+                                {{ player.player_name[:1] | upper }}
+
+                            </div>
+
+
+                            <div>
+
+                                <strong>
+
+                                    {{ player.player_name }}
+
+                                </strong>
+
+                                <small>
+
+                                    {{ player.badminton_id }}
+
+                                </small>
+
+                            </div>
+
+                        </div>
+
+                    </td>
+
+
+
+                    <td>
+
+                        {% if player.ranking_class %}
+
+                        <span class="ranking-class">
+
+                            {{ player.ranking_class }}
+
+                        </span>
+
+                        {% else %}
+
+                        <span class="empty-value">
+                            —
+                        </span>
+
+                        {% endif %}
+
+                    </td>
+
+
+
+                    <td class="numeric">
+
+                        {% if player.national_position %}
+
+                            {{ player.national_position }}
+
+                        {% else %}
+
+                            —
+
+                        {% endif %}
+
+                    </td>
+
+
+
+                    <td class="numeric points-cell">
+
+                        {% if player.points %}
+
+                            {{ player.points }}
+
+                        {% else %}
+
+                            —
+
+                        {% endif %}
+
+                    </td>
+
+
+                </tr>
+
+                {% endfor %}
+
+
+            </tbody>
+
+        </table>
+
+
+        <!-- =================================================
+             NO RESULTS
+             ================================================= -->
+
+        <div
+            id="noPlayerResults"
+            class="no-player-results"
+            hidden
+        >
+
+            <strong>
+                Ingen spillere fundet
+            </strong>
+
+            <span>
+                Prøv et andet navn eller BadmintonID.
+            </span>
+
+        </div>
+
+    </div>
+
+
+</section>
+
+
+
+<style>
+
+    /* =====================================================
+       HEADER
+       ===================================================== */
+
+    .players-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 28px;
+    }
+
+
+    .players-header h1 {
+        margin: 7px 0 8px;
+        font-family: "Manrope", sans-serif;
+        font-size: clamp(34px, 5vw, 52px);
+        line-height: 1;
+        letter-spacing: -0.04em;
+    }
+
+
+    .players-header p {
+        margin: 0;
+        color: var(--muted);
+    }
+
+
+    .players-count {
+        min-width: 110px;
+        padding: 14px 18px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        text-align: right;
+    }
+
+
+    .players-count span {
+        display: block;
+        margin-bottom: 3px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+    }
+
+
+    .players-count strong {
+        font-size: 18px;
+    }
+
+
+
+    /* =====================================================
+       CARD
+       ===================================================== */
+
+    .players-card {
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        background: rgba(8, 20, 35, 0.78);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+    }
+
+
+
+    /* =====================================================
+       TOOLBAR
+       ===================================================== */
+
+    .players-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 20px;
+        border-bottom: 1px solid var(--border);
+    }
+
+
+    .player-search {
+        display: flex;
+        align-items: center;
+        width: min(520px, 100%);
+        gap: 10px;
+        padding: 0 14px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.035);
+    }
+
+
+    .player-search:focus-within {
+        border-color: rgba(76, 201, 240, 0.55);
+        background: rgba(255, 255, 255, 0.055);
+    }
+
+
+    .player-search svg {
+        width: 18px;
+        min-width: 18px;
+        color: var(--muted);
+    }
+
+
+    .player-search input {
+        width: 100%;
+        padding: 13px 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--text);
+        font: inherit;
+    }
+
+
+    .player-search input::placeholder {
+        color: var(--muted);
+    }
+
+
+    .visible-count {
+        display: flex;
+        align-items: baseline;
+        gap: 5px;
+        white-space: nowrap;
+        color: var(--muted);
+        font-size: 12px;
+    }
+
+
+    .visible-count strong {
+        color: var(--text);
+        font-size: 14px;
+    }
+
+
+
+    /* =====================================================
+       TABLE
+       ===================================================== */
+
+    .players-table-wrap {
+        overflow-x: auto;
+    }
+
+
+    .players-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+
+    .players-table th {
+        padding: 13px 18px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-align: left;
+        text-transform: uppercase;
+    }
+
+
+    .players-table td {
+        padding: 14px 18px;
+        border-top: 1px solid rgba(255,255,255,0.06);
+        vertical-align: middle;
+    }
+
+
+    .players-table tbody tr {
+        transition:
+            background 0.15s ease,
+            transform 0.15s ease;
+    }
+
+
+    .players-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.035);
+    }
+
+
+    .numeric {
+        text-align: right !important;
+    }
+
+
+    .player-position {
+        width: 55px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+
+
+    /* =====================================================
+       PLAYER
+       ===================================================== */
+
+    .player-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+
+    .player-list-avatar {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        min-width: 38px;
+        place-items: center;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 11px;
+        background: rgba(37, 150, 190, 0.12);
+        font-weight: 800;
+    }
+
+
+    .player-info strong {
+        display: block;
+        margin-bottom: 3px;
+        font-size: 13px;
+    }
+
+
+    .player-info small {
+        color: var(--muted);
+        font-size: 10px;
+    }
+
+
+    .ranking-class {
+        display: inline-flex;
+        padding: 5px 8px;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 7px;
+        background: rgba(255,255,255,0.04);
+        font-size: 10px;
+        font-weight: 700;
+    }
+
+
+    .points-cell {
+        font-weight: 800;
+    }
+
+
+    .empty-value {
+        color: var(--muted);
+    }
+
+
+
+    /* =====================================================
+       NO RESULTS
+       ===================================================== */
+
+    .no-player-results {
+        padding: 60px 24px;
+        text-align: center;
+    }
+
+
+    .no-player-results strong {
+        display: block;
+        margin-bottom: 7px;
+    }
+
+
+    .no-player-results span {
+        color: var(--muted);
+        font-size: 12px;
+    }
+
+
+
+    /* =====================================================
+       MOBILE
+       ===================================================== */
+
+    @media (max-width: 720px) {
+
+        .players-header {
+            align-items: flex-start;
+        }
+
+
+        .players-count {
+            display: none;
+        }
+
+
+        .players-toolbar {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+
+        .player-search {
+            width: auto;
+        }
+
+
+        .players-table th,
+        .players-table td {
+            padding-left: 12px;
+            padding-right: 12px;
+        }
+
+
+        .players-table th:nth-child(4),
+        .players-table td:nth-child(4) {
+            display: none;
+        }
+
+    }
+
+</style>
+
+
+
+<script>
+
+    const searchInput =
+        document.getElementById(
+            "playerSearch"
+        );
+
+
+    const playerRows =
+        Array.from(
+            document.querySelectorAll(
+                ".player-row"
+            )
+        );
+
+
+    const visiblePlayerCount =
+        document.getElementById(
+            "visiblePlayerCount"
+        );
+
+
+    const noPlayerResults =
+        document.getElementById(
+            "noPlayerResults"
+        );
+
+
+    searchInput.addEventListener(
+        "input",
+        function () {
+
+            const query =
+                this.value
+                    .trim()
+                    .toLocaleLowerCase(
+                        "da-DK"
+                    );
+
+
+            let visible = 0;
+
+
+            playerRows.forEach(
+                function (row) {
+
+                    const searchable =
+                        row.dataset.search
+                            .toLocaleLowerCase(
+                                "da-DK"
+                            );
+
+
+                    const matches =
+                        searchable.includes(
+                            query
+                        );
+
+
+                    row.hidden =
+                        !matches;
+
+
+                    if (matches) {
+
+                        visible += 1;
+
+                    }
+
+                }
+            );
+
+
+            visiblePlayerCount.textContent =
+                visible;
+
+
+            noPlayerResults.hidden =
+                visible !== 0;
+
+        }
+    );
+
+</script>
+{% if current_user.club_role == "admin" %}
+
+<form
+    method="POST"
+    action="{{ url_for('refresh_players') }}"
+>
+    <button
+        type="submit"
+        class="btn btn-primary"
+    >
+        Hent / opdater spillere
+    </button>
+</form>
+
+{% endif %}
+
+{% endblock %}

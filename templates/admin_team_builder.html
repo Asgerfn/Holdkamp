@@ -1,0 +1,567 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+Holdbygning · {{ club.name }}
+{% endblock %}
+
+
+{% block content %}
+
+<style>
+
+    .team-builder-page {
+        max-width: 1050px;
+        margin: 0 auto;
+    }
+
+
+    .team-builder-header {
+        margin-bottom: 28px;
+    }
+
+
+    .team-builder-header .eyebrow {
+        display: block;
+
+        margin-bottom: 8px;
+
+        color: var(--muted);
+
+        font-size: 12px;
+        font-weight: 800;
+
+        letter-spacing: 0.12em;
+
+        text-transform: uppercase;
+    }
+
+
+    .team-builder-header h1 {
+        margin: 0 0 8px;
+
+        font-size: 32px;
+        line-height: 1.15;
+    }
+
+
+    .team-builder-header p {
+        margin: 0;
+
+        color: var(--muted);
+    }
+
+
+    .rules-card {
+        padding: 28px;
+
+        border-radius: 18px;
+
+        border:
+            1px solid
+            rgba(255, 255, 255, 0.08);
+
+        background:
+            rgba(15, 25, 40, 0.78);
+    }
+
+
+    .rules-heading {
+        margin-bottom: 26px;
+    }
+
+
+    .rules-heading h2 {
+        margin: 0 0 7px;
+
+        font-size: 21px;
+    }
+
+
+    .rules-heading p {
+        margin: 0;
+
+        color: var(--muted);
+
+        font-size: 14px;
+    }
+
+
+    .rules-grid {
+        display: grid;
+
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
+
+        gap: 20px;
+    }
+
+
+    .rule-box {
+        padding: 20px;
+
+        border-radius: 14px;
+
+        border:
+            1px solid
+            rgba(255, 255, 255, 0.07);
+
+        background:
+            rgba(255, 255, 255, 0.025);
+    }
+
+
+    .rule-box label {
+        display: block;
+
+        margin-bottom: 8px;
+
+        font-weight: 800;
+    }
+
+
+    .rule-box p {
+        margin: 8px 0 0;
+
+        color: var(--muted);
+
+        font-size: 12px;
+
+        line-height: 1.5;
+    }
+
+
+    .rule-input {
+        width: 100%;
+
+        box-sizing: border-box;
+
+        padding: 13px 14px;
+
+        border-radius: 10px;
+
+        border:
+            1px solid
+            rgba(255, 255, 255, 0.12);
+
+        background:
+            rgba(255, 255, 255, 0.05);
+
+        color: inherit;
+
+        font: inherit;
+
+        font-size: 16px;
+        font-weight: 800;
+    }
+
+
+    .rule-input:focus {
+        outline: none;
+
+        border-color:
+            rgba(255, 255, 255, 0.35);
+    }
+
+
+    .fixed-rule {
+        padding: 13px 14px;
+
+        border-radius: 10px;
+
+        border:
+            1px solid
+            rgba(255, 255, 255, 0.07);
+
+        background:
+            rgba(255, 255, 255, 0.035);
+
+        font-size: 16px;
+        font-weight: 800;
+    }
+
+
+    .rules-summary {
+        display: grid;
+
+        grid-template-columns:
+            repeat(
+                4,
+                minmax(0, 1fr)
+            );
+
+        gap: 12px;
+
+        margin-top: 26px;
+    }
+
+
+    .summary-item {
+        padding: 16px;
+
+        border-radius: 12px;
+
+        background:
+            rgba(255, 255, 255, 0.035);
+
+        border:
+            1px solid
+            rgba(255, 255, 255, 0.06);
+    }
+
+
+    .summary-item span {
+        display: block;
+
+        margin-bottom: 6px;
+
+        color: var(--muted);
+
+        font-size: 11px;
+        font-weight: 700;
+
+        text-transform: uppercase;
+
+        letter-spacing: 0.06em;
+    }
+
+
+    .summary-item strong {
+        font-size: 21px;
+    }
+
+
+    .rules-actions {
+        display: flex;
+
+        justify-content: flex-end;
+
+        margin-top: 26px;
+    }
+
+
+    .save-button {
+        padding: 13px 22px;
+
+        border: 0;
+
+        border-radius: 10px;
+
+        background: white;
+
+        color: #091321;
+
+        font: inherit;
+
+        font-weight: 900;
+
+        cursor: pointer;
+    }
+
+
+    .save-button:hover {
+        opacity: 0.9;
+    }
+
+
+    @media (
+        max-width: 750px
+    ) {
+
+        .rules-grid {
+            grid-template-columns: 1fr;
+        }
+
+
+        .rules-summary {
+            grid-template-columns:
+                repeat(
+                    2,
+                    minmax(0, 1fr)
+                );
+        }
+
+
+        .rules-card {
+            padding: 20px;
+        }
+
+    }
+
+
+    @media (
+        max-width: 450px
+    ) {
+
+        .rules-summary {
+            grid-template-columns: 1fr;
+        }
+
+    }
+
+</style>
+
+
+<div class="team-builder-page">
+
+
+    <!-- =================================================
+         HEADER
+         ================================================= -->
+
+    <section class="team-builder-header">
+
+        <span class="eyebrow">
+            Fantasy manager
+        </span>
+
+        <h1>
+            Holdbygning
+        </h1>
+
+        <p>
+            {{ club.name }}
+            · sæson {{ current_season }}
+        </p>
+
+    </section>
+
+
+    <!-- =================================================
+         RULES
+         ================================================= -->
+
+    <form
+        method="POST"
+        class="rules-card"
+    >
+
+        <div class="rules-heading">
+
+            <h2>
+                Regler for fantasy-hold
+            </h2>
+
+            <p>
+                Bestem hvordan klubbens medlemmer
+                skal bygge deres hold.
+            </p>
+
+        </div>
+
+
+        <div class="rules-grid">
+
+
+            <!-- HERRER -->
+
+            <div class="rule-box">
+
+                <label for="male_players">
+                    Herrer
+                </label>
+
+                <input
+                    class="rule-input"
+                    id="male_players"
+                    name="male_players"
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                    value="{{ rules.male_players }}"
+                >
+
+                <p>
+                    Antal herrespillere der skal
+                    vælges på hvert fantasy-hold.
+                </p>
+
+            </div>
+
+
+            <!-- DAMER -->
+
+            <div class="rule-box">
+
+                <label for="female_players">
+                    Damer
+                </label>
+
+                <input
+                    class="rule-input"
+                    id="female_players"
+                    name="female_players"
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                    value="{{ rules.female_players }}"
+                >
+
+                <p>
+                    Antal damespillere der skal
+                    vælges på hvert fantasy-hold.
+                </p>
+
+            </div>
+
+
+            <!-- CAPTAIN -->
+
+            <div class="rule-box">
+
+                <label>
+                    Kaptajn
+                </label>
+
+                <div class="fixed-rule">
+                    1 spiller
+                </div>
+
+                <p>
+                    Alle fantasy-hold skal have
+                    præcis én kaptajn.
+                </p>
+
+            </div>
+
+
+            <!-- CAPTAIN MULTIPLIER -->
+
+            <div class="rule-box">
+
+                <label>
+                    Kaptajnbonus
+                </label>
+
+                <div class="fixed-rule">
+                    2× point
+                </div>
+
+                <p>
+                    Kaptajnens point tæller
+                    dobbelt.
+                </p>
+
+            </div>
+
+
+            <!-- SUBSTITUTIONS -->
+
+            <div class="rule-box">
+
+                <label for="max_substitutions">
+                    Udskiftninger
+                </label>
+
+                <input
+                    class="rule-input"
+                    id="max_substitutions"
+                    name="max_substitutions"
+                    type="number"
+                    min="0"
+                    step="1"
+                    required
+                    value="{{ rules.max_substitutions }}"
+                >
+
+                <p>
+                    Maksimalt antal spillerskift
+                    efter holdet er aktiveret.
+                </p>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- =================================================
+             SUMMARY
+             ================================================= -->
+
+        <div class="rules-summary">
+
+            <div class="summary-item">
+
+                <span>
+                    Holdstørrelse
+                </span>
+
+                <strong>
+                    {{
+                        rules.male_players
+                        +
+                        rules.female_players
+                    }}
+                </strong>
+
+            </div>
+
+
+            <div class="summary-item">
+
+                <span>
+                    Herrer
+                </span>
+
+                <strong>
+                    {{ rules.male_players }}
+                </strong>
+
+            </div>
+
+
+            <div class="summary-item">
+
+                <span>
+                    Damer
+                </span>
+
+                <strong>
+                    {{ rules.female_players }}
+                </strong>
+
+            </div>
+
+
+            <div class="summary-item">
+
+                <span>
+                    Udskiftninger
+                </span>
+
+                <strong>
+                    {{ rules.max_substitutions }}
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             SAVE
+             ================================================= -->
+
+        <div class="rules-actions">
+
+            <button
+                class="save-button"
+                type="submit"
+            >
+                Gem regler
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+
+{% endblock %}

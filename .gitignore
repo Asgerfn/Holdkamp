@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment variables / secrets
+.env
+.env.*
+*.env
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+
+# Local admin / test scripts with credentials
+opret_bruger.py
+test_table.py
+Upload klubnavne.py
+åben_klub_basisside.py
+åben_klub_basisside.py
+players_database,py.txt
+*klub_basisside.py

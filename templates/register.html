@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}Opret profil · Holdkamp{% endblock %}
+
+{% block content %}
+<section class="auth-layout register-layout">
+    <div class="auth-showcase">
+        <div>
+            <span class="pill">KOM GODT I GANG</span>
+            <h1>Din klub følger<br><span>med din profil.</span></h1>
+            <p class="hero-copy">
+                Opret din profil og vælg den klub, du spiller for.
+                Derefter lander du direkte i klubbens univers, hver gang du logger ind.
+            </p>
+        </div>
+
+        <div class="setup-steps">
+            <div class="setup-step active">
+                <span>1</span>
+                <div>
+                    <strong>Opret profil</strong>
+                    <small>Navn, email og password</small>
+                </div>
+            </div>
+            <div class="setup-step">
+                <span>2</span>
+                <div>
+                    <strong>Vælg klub</strong>
+                    <small>Søg direkte i klubdatabasen</small>
+                </div>
+            </div>
+            <div class="setup-step">
+                <span>3</span>
+                <div>
+                    <strong>Klar</strong>
+                    <small>Du sendes direkte til din klub</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="auth-panel">
+        <div class="auth-card register-card">
+            <div class="auth-card-head">
+                <span class="eyebrow">NY PROFIL</span>
+                <h2>Opret dig</h2>
+                <p>Det tager under et minut.</p>
+            </div>
+
+            <form method="POST" class="auth-form" id="register-form">
+                <label class="field">
+                    <span>Navn</span>
+                    <input
+                        type="text"
+                        name="display_name"
+                        placeholder="Dit fulde navn"
+                        minlength="2"
+                        required
+                    >
+                </label>
+
+                <label class="field">
+                    <span>Email</span>
+                    <input
+                        type="email"
+                        name="email"
+                        placeholder="navn@email.dk"
+                        autocomplete="email"
+                        required
+                    >
+                </label>
+
+                <div class="club-field">
+                    <label class="field">
+                        <span>Klub</span>
+                        <div class="search-input-wrap">
+                            <svg class="search-icon" viewBox="0 0 24 24" fill="none">
+                                <path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z" stroke="currentColor" stroke-width="2"/>
+                                <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            <input
+                                id="club-search"
+                                type="text"
+                                placeholder="Søg efter din klub..."
+                                autocomplete="off"
+                                required
+                            >
+                        </div>
+                    </label>
+
+                    <input type="hidden" name="club_id" id="club-id">
+                    <div id="club-results" class="club-results"></div>
+                </div>
+
+                <div class="two-columns">
+                    <label class="field">
+                        <span>Password</span>
+                        <input
+                            type="password"
+                            name="password"
+                            minlength="8"
+                            autocomplete="new-password"
+                            placeholder="Mindst 8 tegn"
+                            required
+                        >
+                    </label>
+
+                    <label class="field">
+                        <span>Gentag password</span>
+                        <input
+                            type="password"
+                            name="password_confirm"
+                            minlength="8"
+                            autocomplete="new-password"
+                            placeholder="Gentag password"
+                            required
+                        >
+                    </label>
+                </div>
+
+                <button class="primary-button" type="submit">
+                    <span>Opret profil</span>
+                    <span class="button-arrow">→</span>
+                </button>
+            </form>
+
+            <p class="auth-switch">
+                Har du allerede en profil?
+                <a href="{{ url_for('login') }}">Log ind</a>
+            </p>
+        </div>
+    </div>
+</section>
+
+<script>
+const searchInput = document.getElementById("club-search");
+const clubIdInput = document.getElementById("club-id");
+const resultsBox = document.getElementById("club-results");
+const registerForm = document.getElementById("register-form");
+
+let timeout = null;
+
+function hideResults() {
+    resultsBox.innerHTML = "";
+    resultsBox.classList.remove("show");
+}
+
+searchInput.addEventListener("input", () => {
+    clearTimeout(timeout);
+    clubIdInput.value = "";
+
+    const query = searchInput.value.trim();
+
+    if (query.length < 1) {
+        hideResults();
+        return;
+    }
+
+    timeout = setTimeout(async () => {
+        try {
+            const response = await fetch(`/api/clubs?q=${encodeURIComponent(query)}`);
+
+            if (!response.ok) {
+                throw new Error("Kunne ikke hente klubber");
+            }
+
+            const clubs = await response.json();
+            resultsBox.innerHTML = "";
+
+            if (clubs.length === 0) {
+                resultsBox.innerHTML = `
+                    <div class="club-result empty">
+                        <span class="club-result-icon">×</span>
+                        <div>
+                            <strong>Ingen klubber fundet</strong>
+                            <small>Prøv et andet søgeord</small>
+                        </div>
+                    </div>
+                `;
+                resultsBox.classList.add("show");
+                return;
+            }
+
+            clubs.forEach(club => {
+                const item = document.createElement("button");
+                item.type = "button";
+                item.className = "club-result";
+                item.innerHTML = `
+                    <span class="club-result-icon">⌁</span>
+                    <div>
+                        <strong>${escapeHtml(club.name)}</strong>
+                        <small>Vælg klub</small>
+                    </div>
+                    <span class="club-result-arrow">→</span>
+                `;
+
+                item.addEventListener("click", () => {
+                    searchInput.value = club.name;
+                    clubIdInput.value = club.id;
+                    searchInput.classList.add("selected");
+                    hideResults();
+                });
+
+                resultsBox.appendChild(item);
+            });
+
+            resultsBox.classList.add("show");
+        } catch (error) {
+            console.error(error);
+            hideResults();
+        }
+    }, 150);
+});
+
+function escapeHtml(value) {
+    const div = document.createElement("div");
+    div.textContent = value;
+    return div.innerHTML;
+}
+
+document.addEventListener("click", event => {
+    if (!event.target.closest(".club-field")) {
+        hideResults();
+    }
+});
+
+registerForm.addEventListener("submit", event => {
+    if (!clubIdInput.value) {
+        event.preventDefault();
+        searchInput.classList.add("field-error");
+        searchInput.focus();
+        searchInput.placeholder = "Vælg en klub fra listen";
+    }
+});
+</script>
+{% endblock %}

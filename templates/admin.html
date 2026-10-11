@@ -1,0 +1,653 @@
+{% extends "base.html" %}
+
+{% block title %}
+Admin · {{ club.name }}
+{% endblock %}
+
+{% block content %}
+
+
+<!-- =====================================================
+     HEADER
+     ===================================================== -->
+
+<section class="admin-header">
+
+    <div>
+
+        <span class="eyebrow">
+            Klubadministration
+        </span>
+
+        <h1>
+            {{ club.name }}
+        </h1>
+
+        <p>
+            Administrér klubbens profiler og
+            indholdet på dashboardet.
+        </p>
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+     STATS
+     ===================================================== -->
+
+<section class="admin-stats">
+
+    <article class="admin-stat">
+
+        <span>
+            Profiler
+        </span>
+
+        <strong>
+            {{ member_count }}
+        </strong>
+
+    </article>
+
+
+    <article class="admin-stat">
+
+        <span>
+            Administratorer
+        </span>
+
+        <strong>
+            {{ admin_count }}
+        </strong>
+
+    </article>
+
+
+    <article class="admin-stat">
+
+        <span>
+            Hold fundet
+        </span>
+
+        <strong>
+            {{ team_count }}
+        </strong>
+
+    </article>
+
+</section>
+
+
+<!-- =====================================================
+     DASHBOARD TEAMS
+     ===================================================== -->
+
+<section class="members-card">
+
+    <div class="section-heading">
+
+        <div>
+
+            <span class="card-kicker">
+                DASHBOARD
+            </span>
+
+            <h2>
+                Hold på dashboardet
+            </h2>
+
+            <p
+                style="
+                    color: var(--muted);
+                    font-size: 12px;
+                    margin-bottom: 0;
+                "
+            >
+                Sæson {{ current_season }}
+            </p>
+
+        </div>
+
+
+        <!-- =================================================
+             ADMIN ACTIONS
+             ================================================= -->
+
+        <div
+            style="
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                flex-wrap: wrap;
+            "
+        >
+
+            <!-- HENT HOLD -->
+
+            <form
+                method="POST"
+                action="{{ url_for('refresh_admin_teams') }}"
+            >
+
+                <button
+                    type="submit"
+                    class="ghost-button compact"
+                >
+                    Hent hold fra BadmintonPlayer
+                </button>
+
+            </form>
+
+
+            <!-- OPDATER KAMPDATA -->
+
+            {% if team_count > 0 %}
+
+            <form
+                method="POST"
+                action="{{ url_for('refresh_match_results') }}"
+            >
+
+                <button
+                    type="submit"
+                    class="ghost-button compact"
+                >
+                    Opdater kampdata nu
+                </button>
+
+            </form>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    {% if team_count == 0 %}
+
+        <div
+            style="
+                padding: 50px 0;
+                text-align: center;
+                color: var(--muted);
+            "
+        >
+
+            <p>
+                Der er endnu ikke hentet nogen hold.
+            </p>
+
+            <p>
+                Tryk på
+                <strong>
+                    Hent hold fra BadmintonPlayer
+                </strong>
+                ovenfor.
+            </p>
+
+        </div>
+
+
+    {% else %}
+
+
+    <!-- =================================================
+         SAVE DASHBOARD TEAMS
+         ================================================= -->
+
+    <form
+        method="POST"
+        action="{{ url_for('save_admin_teams') }}"
+        id="dashboard-team-form"
+    >
+
+
+        <!-- =================================================
+             YOUTH
+             ================================================= -->
+
+        {% if grouped_teams["U"] %}
+
+        <div
+            class="dashboard-team-department"
+            data-department="U"
+        >
+
+            <div class="dashboard-team-department-header">
+
+                <div>
+
+                    <span class="eyebrow">
+                        AFDELING
+                    </span>
+
+                    <h2>
+                        Ungdom
+                    </h2>
+
+                </div>
+
+
+                <label>
+
+                    <input
+                        type="checkbox"
+                        class="department-toggle"
+                        data-target="U"
+                    >
+
+                    Vælg alle
+
+                </label>
+
+            </div>
+
+
+            {% for sub_department, teams in grouped_teams["U"].items() %}
+
+            <div class="dashboard-team-subdepartment">
+
+                <div class="dashboard-team-subdepartment-header">
+
+                    <h3>
+                        {{ sub_department }}
+                    </h3>
+
+
+                    <label>
+
+                        <input
+                            type="checkbox"
+                            class="subdepartment-toggle"
+                            data-target="U-{{ loop.index }}"
+                        >
+
+                        Vælg alle
+
+                    </label>
+
+                </div>
+
+
+                <div
+                    class="dashboard-team-list"
+                    data-subdepartment="U-{{ loop.index }}"
+                >
+
+                    {% for team in teams %}
+
+                    <label class="dashboard-team-row">
+
+                        <input
+                            type="checkbox"
+                            name="selected_team_ids"
+                            value="{{ team.id }}"
+                            class="team-checkbox"
+                            data-department="U"
+
+                            {% if team.is_active %}
+                                checked
+                            {% endif %}
+                        >
+
+
+                        <div class="dashboard-team-info">
+
+                            <strong>
+                                {{ team.team_name }}
+                            </strong>
+
+                            <span>
+                                {{ team.league_name }}
+                            </span>
+
+                        </div>
+
+                    </label>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+        {% endif %}
+
+
+        <!-- =================================================
+             SENIOR / MOTIONIST / VETERAN
+             ================================================= -->
+
+        {% for department in ["SEN", "MOT", "VET"] %}
+
+            {% if grouped_teams[department] %}
+
+            <div
+                class="dashboard-team-department"
+                data-department="{{ department }}"
+            >
+
+                <div class="dashboard-team-department-header">
+
+                    <div>
+
+                        <span class="eyebrow">
+                            AFDELING
+                        </span>
+
+
+                        <h2>
+
+                            {% if department == "SEN" %}
+
+                                Senior
+
+                            {% elif department == "MOT" %}
+
+                                Motionist
+
+                            {% else %}
+
+                                Veteran
+
+                            {% endif %}
+
+                        </h2>
+
+                    </div>
+
+
+                    <label>
+
+                        <input
+                            type="checkbox"
+                            class="department-toggle"
+                            data-target="{{ department }}"
+                        >
+
+                        Vælg alle
+
+                    </label>
+
+                </div>
+
+
+                <div class="dashboard-team-list">
+
+                    {% for team in grouped_teams[department] %}
+
+                    <label class="dashboard-team-row">
+
+                        <input
+                            type="checkbox"
+                            name="selected_team_ids"
+                            value="{{ team.id }}"
+                            class="team-checkbox"
+                            data-department="{{ department }}"
+
+                            {% if team.is_active %}
+                                checked
+                            {% endif %}
+                        >
+
+
+                        <div class="dashboard-team-info">
+
+                            <strong>
+                                {{ team.team_name }}
+                            </strong>
+
+                            <span>
+                                {{ team.league_name }}
+                            </span>
+
+                        </div>
+
+                    </label>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+            {% endif %}
+
+        {% endfor %}
+
+
+        <!-- =================================================
+             SAVE BUTTON
+             ================================================= -->
+
+        <div
+            style="
+                margin-top: 30px;
+            "
+        >
+
+            <button
+                type="submit"
+                class="primary-button"
+            >
+                Gem dashboard-valg
+            </button>
+
+        </div>
+
+    </form>
+
+    {% endif %}
+
+</section>
+
+
+<!-- =====================================================
+     MEMBERS
+     ===================================================== -->
+
+<section
+    class="members-card"
+    style="margin-top: 24px;"
+>
+
+    <div class="section-heading">
+
+        <div>
+
+            <span class="card-kicker">
+                PROFILER
+            </span>
+
+            <h2>
+                Personer i klubben
+            </h2>
+
+        </div>
+
+    </div>
+
+
+    {% for member in members %}
+
+    <div class="member-row">
+
+        <div class="member-avatar">
+
+            {{ member.display_name[:1] | upper }}
+
+        </div>
+
+
+        <div class="member-info">
+
+            <strong>
+
+                {{ member.display_name }}
+
+                {% if
+                    member.user_id|string
+                    ==
+                    current_user.id|string
+                %}
+
+                    <span class="you">
+                        Dig
+                    </span>
+
+                {% endif %}
+
+            </strong>
+
+
+            <span>
+                {{ member.email }}
+            </span>
+
+        </div>
+
+
+        <div class="member-role">
+
+            {% if member.club_role == "admin" %}
+
+                <span class="role-badge admin">
+                    Admin
+                </span>
+
+            {% else %}
+
+                <span class="role-badge">
+                    Medlem
+                </span>
+
+            {% endif %}
+
+        </div>
+
+
+        <div class="created-date">
+
+            {% if member.created_at %}
+
+                {{
+                    member.created_at.strftime(
+                        "%d.%m.%Y"
+                    )
+                }}
+
+            {% else %}
+
+                —
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+    {% endfor %}
+
+</section>
+
+
+<!-- =====================================================
+     SELECT ALL JAVASCRIPT
+     ===================================================== -->
+
+<script>
+
+// =========================================================
+// MAIN DEPARTMENT
+// =========================================================
+
+document
+    .querySelectorAll(
+        ".department-toggle"
+    )
+    .forEach(toggle => {
+
+        toggle.addEventListener(
+            "change",
+            function () {
+
+                const department =
+                    this.dataset.target;
+
+
+                document
+                    .querySelectorAll(
+                        `.team-checkbox[data-department="${department}"]`
+                    )
+                    .forEach(
+                        checkbox => {
+
+                            checkbox.checked =
+                                this.checked;
+
+                        }
+                    );
+
+            }
+        );
+
+    });
+
+
+// =========================================================
+// YOUTH SUB DEPARTMENT
+// =========================================================
+
+document
+    .querySelectorAll(
+        ".subdepartment-toggle"
+    )
+    .forEach(toggle => {
+
+        toggle.addEventListener(
+            "change",
+            function () {
+
+                const target =
+                    this.dataset.target;
+
+
+                const container =
+                    document.querySelector(
+                        `[data-subdepartment="${target}"]`
+                    );
+
+
+                if (!container) {
+                    return;
+                }
+
+
+                container
+                    .querySelectorAll(
+                        ".team-checkbox"
+                    )
+                    .forEach(
+                        checkbox => {
+
+                            checkbox.checked =
+                                this.checked;
+
+                        }
+                    );
+
+            }
+        );
+
+    });
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,2709 @@
+{% extends "base.html" %}
+
+{% block title %}
+
+Mit hold · Holdkamp
+
+{% endblock %}
+
+{% block content %}
+
+<style>
+
+    .my-team-page {
+
+        max-width: 1250px;
+
+        margin: 0 auto;
+
+    }
+
+    .my-team-header {
+
+        display: flex;
+
+        justify-content: space-between;
+
+        gap: 24px;
+
+        align-items: flex-end;
+
+        margin-bottom: 28px;
+
+    }
+
+    .my-team-header h1 {
+
+        margin: 4px 0 7px;
+
+        font-size: 32px;
+
+    }
+
+    .my-team-header p {
+
+        margin: 0;
+
+        color: var(--muted);
+
+    }
+
+    .team-status {
+
+        padding: 7px 11px;
+
+        border-radius: 999px;
+
+        font-size: 12px;
+
+        font-weight: 800;
+
+        border: 1px solid rgba(255,255,255,.1);
+
+        background: rgba(255,255,255,.04);
+
+    }
+
+    .team-status.active {
+
+        background: rgba(61, 209, 138, .10);
+
+        border-color: rgba(61, 209, 138, .25);
+
+    }
+
+    .team-layout {
+
+        display: grid;
+
+        grid-template-columns:
+
+            minmax(0, 1.45fr)
+
+            minmax(340px, .75fr);
+
+        gap: 22px;
+
+        align-items: start;
+
+    }
+
+    .team-card {
+
+        border-radius: 18px;
+
+        border: 1px solid rgba(255,255,255,.08);
+
+        background: rgba(15,25,40,.78);
+
+        padding: 24px;
+
+    }
+
+    .team-card h2 {
+
+        margin: 0;
+
+        font-size: 20px;
+
+    }
+
+    .team-card-copy {
+
+        margin-top: 7px;
+
+        color: var(--muted);
+
+        font-size: 13px;
+
+    }
+
+    .rules-row {
+
+        display: grid;
+
+        grid-template-columns:
+
+            repeat(4, minmax(0, 1fr));
+
+        gap: 10px;
+
+        margin-bottom: 22px;
+
+    }
+
+    .rule-stat {
+
+        border: 1px solid rgba(255,255,255,.07);
+
+        background: rgba(255,255,255,.03);
+
+        border-radius: 13px;
+
+        padding: 14px;
+
+    }
+
+    .rule-stat span {
+
+        display: block;
+
+        color: var(--muted);
+
+        font-size: 11px;
+
+        margin-bottom: 5px;
+
+    }
+
+    .rule-stat strong {
+
+        font-size: 18px;
+
+    }
+
+    .team-name-input,
+
+    .player-search {
+
+        width: 100%;
+
+        box-sizing: border-box;
+
+        border: 1px solid rgba(255,255,255,.10);
+
+        background: rgba(255,255,255,.04);
+
+        color: inherit;
+
+        padding: 12px 14px;
+
+        border-radius: 10px;
+
+        font: inherit;
+
+    }
+
+    .team-name-input {
+
+        margin-bottom: 18px;
+
+        font-weight: 700;
+
+    }
+
+    .player-search {
+
+        margin: 18px 0 14px;
+
+    }
+
+    .player-section-title {
+
+        display: flex;
+
+        justify-content: space-between;
+
+        align-items: center;
+
+        width: 100%;
+
+        margin: 22px 0 10px;
+
+        padding: 0;
+
+        border: 0;
+
+        background: transparent;
+
+        color: inherit;
+
+        font: inherit;
+
+        text-align: left;
+
+    }
+
+    .player-section-toggle {
+
+        cursor: pointer;
+
+        user-select: none;
+
+    }
+
+    .player-section-title strong {
+
+        font-size: 14px;
+
+    }
+
+    .player-section-meta {
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 10px;
+
+    }
+
+    .player-section-title span {
+
+        color: var(--muted);
+
+        font-size: 12px;
+
+    }
+
+    .section-chevron {
+
+        display: inline-flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        width: 22px;
+
+        height: 22px;
+
+        border-radius: 7px;
+
+        background: rgba(255,255,255,.05);
+
+        font-size: 14px !important;
+
+        line-height: 1;
+
+    }
+
+    .player-list {
+
+        display: grid;
+
+        gap: 8px;
+
+    }
+
+    .player-row {
+
+        display: flex;
+
+        gap: 12px;
+
+        align-items: center;
+
+        justify-content: space-between;
+
+        padding: 12px 13px;
+
+        border:
+
+            1px solid
+
+            rgba(255,255,255,.07);
+
+        border-radius: 11px;
+
+        background:
+
+            rgba(255,255,255,.025);
+
+    }
+
+    .player-row.selected {
+
+        opacity: .38;
+
+    }
+
+    .player-info {
+
+        min-width: 0;
+
+    }
+
+    .player-info strong {
+
+        display: block;
+
+        font-size: 13px;
+
+    }
+
+    .player-meta {
+
+        display: flex;
+
+        flex-wrap: wrap;
+
+        gap: 8px;
+
+        margin-top: 4px;
+
+        color: var(--muted);
+
+        font-size: 11px;
+
+    }
+
+    .player-points {
+
+        white-space: nowrap;
+
+        font-size: 12px;
+
+        font-weight: 800;
+
+    }
+
+    .add-player,
+
+    .remove-player {
+
+        border: 0;
+
+        cursor: pointer;
+
+        border-radius: 9px;
+
+        font-weight: 900;
+
+    }
+
+    .add-player {
+
+        width: 34px;
+
+        height: 34px;
+
+        font-size: 18px;
+
+    }
+
+    .remove-player {
+
+        width: 28px;
+
+        height: 28px;
+
+        background: rgba(255,255,255,.06);
+
+        color: inherit;
+
+    }
+
+    .selected-header {
+
+        display: flex;
+
+        justify-content: space-between;
+
+        align-items: center;
+
+        gap: 10px;
+
+        margin-bottom: 18px;
+
+    }
+
+    .selection-counter {
+
+        font-size: 12px;
+
+        color: var(--muted);
+
+    }
+
+    .selected-group {
+
+        margin-top: 20px;
+
+    }
+
+    .selected-group-heading {
+
+        display: flex;
+
+        justify-content: space-between;
+
+        align-items: center;
+
+        margin-bottom: 9px;
+
+    }
+
+    .selected-group-heading strong {
+
+        font-size: 13px;
+
+    }
+
+    .selected-group-heading span {
+
+        color: var(--muted);
+
+        font-size: 12px;
+
+    }
+
+    .selected-player {
+
+        display: grid;
+
+        grid-template-columns:
+
+            minmax(0, 1fr)
+
+            auto;
+
+        gap: 10px;
+
+        padding: 11px 12px;
+
+        margin-bottom: 8px;
+
+        border-radius: 11px;
+
+        border:
+
+            1px solid
+
+            rgba(255,255,255,.07);
+
+        background:
+
+            rgba(255,255,255,.025);
+
+    }
+
+    .selected-player-name {
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 8px;
+
+    }
+
+    .captain-radio {
+
+        cursor: pointer;
+
+    }
+
+    .captain-badge {
+
+        font-size: 10px;
+
+        padding: 3px 6px;
+
+        border-radius: 999px;
+
+        background: rgba(255,255,255,.08);
+
+    }
+
+    .empty-selection {
+
+        color: var(--muted);
+
+        font-size: 12px;
+
+        padding: 14px 0;
+
+    }
+
+    .team-actions {
+
+        display: grid;
+
+        gap: 9px;
+
+        margin-top: 24px;
+
+    }
+
+    .primary-button,
+
+    .secondary-button {
+
+        border: 0;
+
+        border-radius: 10px;
+
+        padding: 12px 15px;
+
+        font: inherit;
+
+        font-weight: 800;
+
+        cursor: pointer;
+
+    }
+
+    .primary-button {
+
+        background: white;
+
+        color: #07111f;
+
+    }
+
+    .secondary-button {
+
+        color: inherit;
+
+        background: rgba(255,255,255,.06);
+
+        border: 1px solid rgba(255,255,255,.08);
+
+    }
+
+    .primary-button:disabled,
+
+    .secondary-button:disabled {
+
+        cursor: not-allowed;
+
+        opacity: .35;
+
+    }
+
+    .substitution-panel {
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255,255,255,.08);
+    }
+
+
+    .substitution-panel h3 {
+        margin: 0 0 6px;
+        font-size: 15px;
+    }
+
+
+    .substitution-panel-copy {
+        margin: 0 0 14px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+
+    .substitution-fields {
+        display: grid;
+        gap: 10px;
+    }
+
+
+    .substitution-field label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+
+    .substitution-select {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid rgba(255,255,255,.10);
+        background: #162231;
+        color: inherit;
+        padding: 11px 12px;
+        border-radius: 10px;
+        font: inherit;
+    }
+
+
+    .substitution-select:disabled {
+        opacity: .45;
+    }
+
+
+    .substitution-button {
+        margin-top: 4px;
+    }
+
+
+    .substitution-limit {
+        margin-top: 24px;
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,.08);
+        background: rgba(255,255,255,.03);
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+
+    .locked-notice,
+
+    .no-rules {
+
+        border-radius: 14px;
+
+        border: 1px solid rgba(255,255,255,.08);
+
+        background: rgba(255,255,255,.03);
+
+        padding: 18px;
+
+        color: var(--muted);
+
+        line-height: 1.6;
+
+    }
+
+    .unknown-gender {
+
+        opacity: .55;
+
+    }
+
+    @media (max-width: 900px) {
+
+        .team-layout {
+
+            grid-template-columns: 1fr;
+
+        }
+
+        .rules-row {
+
+            grid-template-columns:
+
+                repeat(2, minmax(0, 1fr));
+
+        }
+
+    }
+
+    @media (max-width: 550px) {
+
+        .my-team-header {
+
+            align-items: flex-start;
+
+            flex-direction: column;
+
+        }
+
+        .rules-row {
+
+            grid-template-columns: 1fr 1fr;
+
+        }
+
+        .team-card {
+
+            padding: 18px;
+
+        }
+
+    }
+
+</style>
+
+<div class="my-team-page">
+
+    <!-- ================================================
+
+         HEADER
+
+         ================================================ -->
+
+    <section class="my-team-header">
+
+        <div>
+
+            <span class="eyebrow">
+
+                Fantasy manager
+
+            </span>
+
+            <h1>
+
+                Mit hold
+
+            </h1>
+
+            <p>
+
+                {{ club.name }}
+
+                · sæson {{ current_season }}
+
+            </p>
+
+        </div>
+
+        {% if team %}
+
+            <span
+
+                class="
+
+                    team-status
+
+                    {% if team.status == 'active' %}
+
+                        active
+
+                    {% endif %}
+
+                "
+
+            >
+
+                {% if team.status == "active" %}
+
+                    Aktivt hold
+
+                {% else %}
+
+                    Kladde
+
+                {% endif %}
+
+            </span>
+
+        {% endif %}
+
+    </section>
+
+    <!-- ================================================
+
+         NO RULES
+
+         ================================================ -->
+
+    {% if not rules %}
+
+        <div class="no-rules">
+
+            Fantasy-spillet er endnu ikke sat op
+
+            for denne sæson.
+
+            {% if current_user.club_role == "admin" %}
+
+                Gå til
+
+                <a href="{{ url_for('admin_team_builder') }}">
+
+                    Holdbygning
+
+                </a>
+
+                for at oprette reglerne.
+
+            {% endif %}
+
+        </div>
+
+    {% else %}
+
+        <!-- ============================================
+
+             RULE SUMMARY
+
+             ============================================ -->
+
+        <div class="rules-row">
+
+            <div class="rule-stat">
+
+                <span>Herrer</span>
+
+                <strong>
+
+                    {{ rules.male_players }}
+
+                </strong>
+
+            </div>
+
+            <div class="rule-stat">
+
+                <span>Damer</span>
+
+                <strong>
+
+                    {{ rules.female_players }}
+
+                </strong>
+
+            </div>
+
+            <div class="rule-stat">
+
+                <span>Kaptajn</span>
+
+                <strong>
+
+                    ×{{ rules.captain_multiplier | int }}
+
+                </strong>
+
+            </div>
+
+            <div class="rule-stat">
+
+                <span>Udskiftninger</span>
+
+                <strong>
+
+                    {{ substitutions_used }}
+
+                    /
+
+                    {{ rules.max_substitutions }}
+
+                </strong>
+
+            </div>
+
+        </div>
+
+        <form
+
+            method="POST"
+
+            id="team-form"
+
+        >
+
+            <div class="team-layout">
+
+                <!-- ====================================
+
+                     AVAILABLE PLAYERS
+
+                     ==================================== -->
+
+                <section class="team-card">
+
+                    <h2>
+
+                        Spillere
+
+                    </h2>
+
+                    <div class="team-card-copy">
+
+                        Vælg spillere fra
+
+                        {{ club.name }}.
+
+                    </div>
+
+                    {% if not team or team.status == "draft" %}
+
+                    <input
+
+                        type="search"
+
+                        id="player-search"
+
+                        class="player-search"
+
+                        placeholder="Søg efter spiller..."
+
+                        autocomplete="off"
+
+                    >
+
+                    <!-- MEN -->
+
+                    <button
+
+                        type="button"
+
+                        class="player-section-title player-section-toggle"
+
+                        data-target="male-player-list"
+
+                        aria-expanded="true"
+
+                    >
+
+                        <strong>
+
+                            Herrer
+
+                        </strong>
+
+                        <span class="player-section-meta">
+
+                            <span>
+
+                                {{ rules.male_players }}
+
+                                skal vælges
+
+                            </span>
+
+                            <span class="section-chevron" aria-hidden="true">
+
+                                ▴
+
+                            </span>
+
+                        </span>
+
+                    </button>
+
+                    <div
+
+                        class="player-list"
+
+                        id="male-player-list"
+
+                    >
+
+                        {% for player in players %}
+
+                            {% if player.gender == "M" %}
+
+                                <div
+
+                                    class="player-row"
+
+                                    data-player-id="{{ player.badminton_id }}"
+
+                                    data-player-name="{{ player.player_name | lower }}"
+
+                                    data-gender="M"
+
+                                    data-points="{{ player.fantasy_points }}"
+
+                                >
+
+                                    <div class="player-info">
+
+                                        <strong>
+
+                                            {{ player.player_name }}
+
+                                        </strong>
+
+                                        <div class="player-meta">
+
+                                            {% if player.national_position %}
+
+                                                <span>
+
+                                                    #{{ player.national_position }}
+
+                                                </span>
+
+                                            {% endif %}
+
+                                            {% if player.ranking_class %}
+
+                                                <span>
+
+                                                    {{ player.ranking_class }}
+
+                                                </span>
+
+                                            {% endif %}
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="player-points">
+
+                                        {{ player.fantasy_points }} p
+
+                                    </div>
+
+                                    <button
+
+                                        type="button"
+
+                                        class="add-player"
+
+                                        title="Tilføj spiller"
+
+                                    >
+
+                                        +
+
+                                    </button>
+
+                                </div>
+
+                            {% endif %}
+
+                        {% endfor %}
+
+                    </div>
+
+                    <!-- WOMEN -->
+
+                    <button
+
+                        type="button"
+
+                        class="player-section-title player-section-toggle"
+
+                        data-target="female-player-list"
+
+                        aria-expanded="true"
+
+                    >
+
+                        <strong>
+
+                            Damer
+
+                        </strong>
+
+                        <span class="player-section-meta">
+
+                            <span>
+
+                                {{ rules.female_players }}
+
+                                skal vælges
+
+                            </span>
+
+                            <span class="section-chevron" aria-hidden="true">
+
+                                ▴
+
+                            </span>
+
+                        </span>
+
+                    </button>
+
+                    <div
+
+                        class="player-list"
+
+                        id="female-player-list"
+
+                    >
+
+                        {% for player in players %}
+
+                            {% if player.gender == "K" %}
+
+                                <div
+
+                                    class="player-row"
+
+                                    data-player-id="{{ player.badminton_id }}"
+
+                                    data-player-name="{{ player.player_name | lower }}"
+
+                                    data-gender="K"
+
+                                    data-points="{{ player.fantasy_points }}"
+
+                                >
+
+                                    <div class="player-info">
+
+                                        <strong>
+
+                                            {{ player.player_name }}
+
+                                        </strong>
+
+                                        <div class="player-meta">
+
+                                            {% if player.national_position %}
+
+                                                <span>
+
+                                                    #{{ player.national_position }}
+
+                                                </span>
+
+                                            {% endif %}
+
+                                            {% if player.ranking_class %}
+
+                                                <span>
+
+                                                    {{ player.ranking_class }}
+
+                                                </span>
+
+                                            {% endif %}
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="player-points">
+
+                                        {{ player.fantasy_points }} p
+
+                                    </div>
+
+                                    <button
+
+                                        type="button"
+
+                                        class="add-player"
+
+                                        title="Tilføj spiller"
+
+                                    >
+
+                                        +
+
+                                    </button>
+
+                                </div>
+
+                            {% endif %}
+
+                        {% endfor %}
+
+                    </div>
+
+                    {% else %}
+
+                        <div class="locked-notice">
+
+                            Dit hold er aktiveret.
+
+                            Spillere kan derfor ikke længere
+
+                            redigeres som kladde.
+
+                            Næste funktion bliver
+
+                            udskiftninger.
+
+                        </div>
+
+                    {% endif %}
+
+                </section>
+
+                <!-- ====================================
+
+                     SELECTED TEAM
+
+                     ==================================== -->
+
+                <aside class="team-card">
+
+                    <div class="selected-header">
+
+                        <div>
+
+                            <h2>
+
+                                Dit hold
+
+                            </h2>
+
+                            <div class="team-card-copy">
+
+                                Vælg én kaptajn.
+
+                            </div>
+
+                        </div>
+
+                        <span
+
+                            class="selection-counter"
+
+                            id="total-counter"
+
+                        >
+
+                        </span>
+
+                    </div>
+
+                    {% if not team or team.status == "draft" %}
+
+                        <input
+
+                            class="team-name-input"
+
+                            type="text"
+
+                            name="team_name"
+
+                            maxlength="100"
+
+                            required
+
+                            placeholder="Navn på dit hold"
+
+                            value="{{
+
+                                team.team_name
+
+                                if team
+
+                                else ''
+
+                            }}"
+
+                        >
+
+                    {% else %}
+
+                        <div
+
+                            class="team-name-input"
+
+                        >
+
+                            {{ team.team_name }}
+
+                        </div>
+
+                    {% endif %}
+
+                    <div class="selected-group">
+
+                        <div class="selected-group-heading">
+
+                            <strong>
+
+                                Herrer
+
+                            </strong>
+
+                            <span id="male-counter">
+
+                                0 / {{ rules.male_players }}
+
+                            </span>
+
+                        </div>
+
+                        <div id="selected-male">
+
+                            <div
+
+                                class="empty-selection"
+
+                                id="empty-male"
+
+                            >
+
+                                Ingen herrer valgt endnu.
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="selected-group">
+
+                        <div class="selected-group-heading">
+
+                            <strong>
+
+                                Damer
+
+                            </strong>
+
+                            <span id="female-counter">
+
+                                0 / {{ rules.female_players }}
+
+                            </span>
+
+                        </div>
+
+                        <div id="selected-female">
+
+                            <div
+
+                                class="empty-selection"
+
+                                id="empty-female"
+
+                            >
+
+                                Ingen damer valgt endnu.
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    {% if not team or team.status == "draft" %}
+
+                        <div id="hidden-fields"></div>
+
+                        <div class="team-actions">
+
+                            <button
+
+                                type="submit"
+
+                                name="action"
+
+                                value="save"
+
+                                class="secondary-button"
+
+                                id="save-button"
+
+                            >
+
+                                Gem kladde
+
+                            </button>
+
+                            <button
+
+                                type="submit"
+
+                                name="action"
+
+                                value="activate"
+
+                                class="primary-button"
+
+                                id="activate-button"
+
+                                disabled
+
+                            >
+
+                                Aktivér hold
+
+                            </button>
+
+                        </div>
+
+                    {% else %}
+
+                        {% if substitutions_used < rules.max_substitutions %}
+
+                            <div class="substitution-panel">
+
+                                <h3>Lav udskiftning</h3>
+
+                                <p class="substitution-panel-copy">
+                                    En udskiftning gælder fra det øjeblik, den gennemføres.
+                                    Den nye spiller overtager kaptajnrollen automatisk, hvis kaptajnen skiftes ud.
+                                </p>
+
+                                <div class="substitution-fields">
+
+                                    <div class="substitution-field">
+
+                                        <label for="sub-player-out">Spiller ud</label>
+
+                                        <select
+                                            id="sub-player-out"
+                                            name="player_out"
+                                            class="substitution-select"
+                                        >
+
+                                            <option value="">Vælg spiller...</option>
+
+                                            {% for player in selected_players %}
+
+                                                <option
+                                                    value="{{ player.badminton_id }}"
+                                                    data-gender="{{ player.gender }}"
+                                                >
+                                                    {{ player.player_name }}{% if player.is_captain %} · Kaptajn{% endif %}
+                                                </option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                    <div class="substitution-field">
+
+                                        <label for="sub-player-in">Spiller ind</label>
+
+                                        <select
+                                            id="sub-player-in"
+                                            name="player_in"
+                                            class="substitution-select"
+                                            disabled
+                                        >
+
+                                            <option value="">Vælg først spiller ud...</option>
+
+                                            {% for player in players %}
+
+                                                <option
+                                                    value="{{ player.badminton_id }}"
+                                                    data-gender="{{ player.gender }}"
+                                                >
+                                                    {{ player.player_name }} · {{ player.fantasy_points }} p
+                                                </option>
+
+                                            {% endfor %}
+
+                                        </select>
+
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        name="action"
+                                        value="substitute"
+                                        class="primary-button substitution-button"
+                                        id="substitution-button"
+                                        disabled
+                                    >
+                                        Gennemfør udskiftning
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        {% else %}
+
+                            <div class="substitution-limit">
+                                Du har brugt alle {{ rules.max_substitutions }} udskiftninger.
+                            </div>
+
+                        {% endif %}
+
+                    {% endif %}
+
+                </aside>
+
+            </div>
+
+        </form>
+
+    {% endif %}
+
+</div>
+
+{% if rules %}
+
+<script>
+
+    const requiredMale =
+
+        {{ rules.male_players }};
+
+    const requiredFemale =
+
+        {{ rules.female_players }};
+
+    const teamIsActive =
+
+        {{ 'true'
+
+            if team and team.status == 'active'
+
+            else 'false'
+
+        }};
+
+    const selectedPlayers =
+
+        new Map();
+
+    const initialPlayers = [
+
+        {% for player in selected_players %}
+
+        {
+
+            id:
+
+                {{ player.badminton_id | tojson }},
+
+            name:
+
+                {{ player.player_name | tojson }},
+
+            gender:
+
+                {{ player.gender | tojson }},
+
+            points:
+
+                {{ player.fantasy_points | tojson }},
+
+            captain:
+
+                {{ 'true'
+
+                    if player.is_captain
+
+                    else 'false'
+
+                }}
+
+        }
+
+        {% if not loop.last %},{% endif %}
+
+        {% endfor %}
+
+    ];
+
+    function getGenderCount(
+
+        gender
+
+    ) {
+
+        return Array
+
+            .from(
+
+                selectedPlayers.values()
+
+            )
+
+            .filter(
+
+                player =>
+
+                    player.gender === gender
+
+            )
+
+            .length;
+
+    }
+
+    function getCaptainId() {
+
+        for (
+
+            const player
+
+            of selectedPlayers.values()
+
+        ) {
+
+            if (player.captain) {
+
+                return player.id;
+
+            }
+
+        }
+
+        return null;
+
+    }
+
+    function addPlayer(
+
+        player
+
+    ) {
+
+        if (
+
+            selectedPlayers.has(
+
+                player.id
+
+            )
+
+        ) {
+
+            return;
+
+        }
+
+        if (
+
+            player.gender === "M"
+
+            &&
+
+            getGenderCount(
+
+                "M"
+
+            )
+
+            >=
+
+            requiredMale
+
+        ) {
+
+            return;
+
+        }
+
+        if (
+
+            player.gender === "K"
+
+            &&
+
+            getGenderCount(
+
+                "K"
+
+            )
+
+            >=
+
+            requiredFemale
+
+        ) {
+
+            return;
+
+        }
+
+        selectedPlayers.set(
+
+            player.id,
+
+            player
+
+        );
+
+        renderTeam();
+
+    }
+
+    function removePlayer(
+
+        playerId
+
+    ) {
+
+        selectedPlayers.delete(
+
+            playerId
+
+        );
+
+        renderTeam();
+
+    }
+
+    function chooseCaptain(
+
+        playerId
+
+    ) {
+
+        for (
+
+            const player
+
+            of selectedPlayers.values()
+
+        ) {
+
+            player.captain =
+
+                player.id === playerId;
+
+        }
+
+        renderTeam();
+
+    }
+
+    function renderSelectedGroup(
+
+        gender,
+
+        containerId,
+
+        emptyId
+
+    ) {
+
+        const container =
+
+            document.getElementById(
+
+                containerId
+
+            );
+
+        if (!container) {
+
+            return;
+
+        }
+
+        container.innerHTML = "";
+
+        const players =
+
+            Array
+
+                .from(
+
+                    selectedPlayers.values()
+
+                )
+
+                .filter(
+
+                    player =>
+
+                        player.gender === gender
+
+                );
+
+        if (players.length === 0) {
+
+            const empty =
+
+                document.createElement(
+
+                    "div"
+
+                );
+
+            empty.className =
+
+                "empty-selection";
+
+            empty.id =
+
+                emptyId;
+
+            empty.textContent =
+
+                gender === "M"
+
+                ? "Ingen herrer valgt endnu."
+
+                : "Ingen damer valgt endnu.";
+
+            container.appendChild(
+
+                empty
+
+            );
+
+            return;
+
+        }
+
+        for (
+
+            const player
+
+            of players
+
+        ) {
+
+            const row =
+
+                document.createElement(
+
+                    "div"
+
+                );
+
+            row.className =
+
+                "selected-player";
+
+            const left =
+
+                document.createElement(
+
+                    "div"
+
+                );
+
+            const name =
+
+                document.createElement(
+
+                    "div"
+
+                );
+
+            name.className =
+
+                "selected-player-name";
+
+            const captain =
+
+                document.createElement(
+
+                    "input"
+
+                );
+
+            captain.type =
+
+                "radio";
+
+            captain.name =
+
+                "captain_visual";
+
+            captain.className =
+
+                "captain-radio";
+
+            captain.checked =
+
+                !!player.captain;
+
+            captain.disabled =
+
+                teamIsActive;
+
+            captain.addEventListener(
+
+                "change",
+
+                () => {
+
+                    chooseCaptain(
+
+                        player.id
+
+                    );
+
+                }
+
+            );
+
+            const label =
+
+                document.createElement(
+
+                    "strong"
+
+                );
+
+            label.textContent =
+
+                player.name;
+
+            name.appendChild(
+
+                captain
+
+            );
+
+            name.appendChild(
+
+                label
+
+            );
+
+            if (player.captain) {
+
+                const badge =
+
+                    document.createElement(
+
+                        "span"
+
+                    );
+
+                badge.className =
+
+                    "captain-badge";
+
+                badge.textContent =
+
+                    "Kaptajn";
+
+                name.appendChild(
+
+                    badge
+
+                );
+
+            }
+
+            const meta =
+
+                document.createElement(
+
+                    "div"
+
+                );
+
+            meta.className =
+
+                "player-meta";
+
+            meta.textContent =
+
+                `${player.points} point`;
+
+            left.appendChild(
+
+                name
+
+            );
+
+            left.appendChild(
+
+                meta
+
+            );
+
+            row.appendChild(
+
+                left
+
+            );
+
+            if (!teamIsActive) {
+
+                const remove =
+
+                    document.createElement(
+
+                        "button"
+
+                    );
+
+                remove.type =
+
+                    "button";
+
+                remove.className =
+
+                    "remove-player";
+
+                remove.textContent =
+
+                    "×";
+
+                remove.addEventListener(
+
+                    "click",
+
+                    () => {
+
+                        removePlayer(
+
+                            player.id
+
+                        );
+
+                    }
+
+                );
+
+                row.appendChild(
+
+                    remove
+
+                );
+
+            }
+
+            container.appendChild(
+
+                row
+
+            );
+
+        }
+
+    }
+
+    function renderHiddenFields() {
+
+        const container =
+
+            document.getElementById(
+
+                "hidden-fields"
+
+            );
+
+        if (!container) {
+
+            return;
+
+        }
+
+        container.innerHTML = "";
+
+        for (
+
+            const player
+
+            of selectedPlayers.values()
+
+        ) {
+
+            const input =
+
+                document.createElement(
+
+                    "input"
+
+                );
+
+            input.type =
+
+                "hidden";
+
+            input.name =
+
+                "selected_players";
+
+            input.value =
+
+                player.id;
+
+            container.appendChild(
+
+                input
+
+            );
+
+        }
+
+        const captainId =
+
+            getCaptainId();
+
+        if (captainId) {
+
+            const captain =
+
+                document.createElement(
+
+                    "input"
+
+                );
+
+            captain.type =
+
+                "hidden";
+
+            captain.name =
+
+                "captain_id";
+
+            captain.value =
+
+                captainId;
+
+            container.appendChild(
+
+                captain
+
+            );
+
+        }
+
+    }
+
+    function renderAvailablePlayers() {
+
+        document
+
+            .querySelectorAll(
+
+                ".player-row"
+
+            )
+
+            .forEach(
+
+                row => {
+
+                    const playerId =
+
+                        row.dataset.playerId;
+
+                    row.classList.toggle(
+
+                        "selected",
+
+                        selectedPlayers.has(
+
+                            playerId
+
+                        )
+
+                    );
+
+                }
+
+            );
+
+    }
+
+    function renderCounters() {
+
+        const maleCount =
+
+            getGenderCount(
+
+                "M"
+
+            );
+
+        const femaleCount =
+
+            getGenderCount(
+
+                "K"
+
+            );
+
+        const maleCounter =
+
+            document.getElementById(
+
+                "male-counter"
+
+            );
+
+        const femaleCounter =
+
+            document.getElementById(
+
+                "female-counter"
+
+            );
+
+        const totalCounter =
+
+            document.getElementById(
+
+                "total-counter"
+
+            );
+
+        if (maleCounter) {
+
+            maleCounter.textContent =
+
+                `${maleCount} / ${requiredMale}`;
+
+        }
+
+        if (femaleCounter) {
+
+            femaleCounter.textContent =
+
+                `${femaleCount} / ${requiredFemale}`;
+
+        }
+
+        if (totalCounter) {
+
+            totalCounter.textContent =
+
+                `${maleCount + femaleCount} / `
+
+                +
+
+                `${requiredMale + requiredFemale}`;
+
+        }
+
+        const activateButton =
+
+            document.getElementById(
+
+                "activate-button"
+
+            );
+
+        if (activateButton) {
+
+            const complete =
+
+                maleCount === requiredMale
+
+                &&
+
+                femaleCount === requiredFemale
+
+                &&
+
+                !!getCaptainId();
+
+            activateButton.disabled =
+
+                !complete;
+
+        }
+
+    }
+
+    function renderTeam() {
+
+        renderSelectedGroup(
+
+            "M",
+
+            "selected-male",
+
+            "empty-male"
+
+        );
+
+        renderSelectedGroup(
+
+            "K",
+
+            "selected-female",
+
+            "empty-female"
+
+        );
+
+        renderHiddenFields();
+
+        renderAvailablePlayers();
+
+        renderCounters();
+
+    }
+
+    document
+
+        .querySelectorAll(
+
+            ".add-player"
+
+        )
+
+        .forEach(
+
+            button => {
+
+                button.addEventListener(
+
+                    "click",
+
+                    () => {
+
+                        const row =
+
+                            button.closest(
+
+                                ".player-row"
+
+                            );
+
+                        addPlayer(
+
+                            {
+
+                                id:
+
+                                    row.dataset.playerId,
+
+                                name:
+
+                                    row
+
+                                        .querySelector(
+
+                                            ".player-info strong"
+
+                                        )
+
+                                        .textContent
+
+                                        .trim(),
+
+                                gender:
+
+                                    row.dataset.gender,
+
+                                points:
+
+                                    Number(
+
+                                        row.dataset.points
+
+                                        || 0
+
+                                    ),
+
+                                captain:
+
+                                    false
+
+                            }
+
+                        );
+
+                    }
+
+                );
+
+            }
+
+        );
+
+    document
+
+        .querySelectorAll(
+
+            ".player-section-toggle"
+
+        )
+
+        .forEach(
+
+            toggle => {
+
+                toggle.addEventListener(
+
+                    "click",
+
+                    () => {
+
+                        const targetId =
+
+                            toggle.dataset.target;
+
+                        const list =
+
+                            document.getElementById(
+
+                                targetId
+
+                            );
+
+                        if (!list) {
+
+                            return;
+
+                        }
+
+                        const isOpen =
+
+                            toggle.getAttribute(
+
+                                "aria-expanded"
+
+                            ) === "true";
+
+                        const newIsOpen =
+
+                            !isOpen;
+
+                        toggle.setAttribute(
+
+                            "aria-expanded",
+
+                            newIsOpen
+
+                                ? "true"
+
+                                : "false"
+
+                        );
+
+                        list.hidden =
+
+                            !newIsOpen;
+
+                        const chevron =
+
+                            toggle.querySelector(
+
+                                ".section-chevron"
+
+                            );
+
+                        if (chevron) {
+
+                            chevron.textContent =
+
+                                newIsOpen
+
+                                    ? "▴"
+
+                                    : "▾";
+
+                        }
+
+                    }
+
+                );
+
+            }
+
+        );
+
+    const search =
+
+        document.getElementById(
+
+            "player-search"
+
+        );
+
+    if (search) {
+
+        search.addEventListener(
+
+            "input",
+
+            () => {
+
+                const query =
+
+                    search.value
+
+                        .trim()
+
+                        .toLowerCase();
+
+                document
+
+                    .querySelectorAll(
+
+                        ".player-row"
+
+                    )
+
+                    .forEach(
+
+                        row => {
+
+                            row.style.display =
+
+                                row
+
+                                    .dataset
+
+                                    .playerName
+
+                                    .includes(
+
+                                        query
+
+                                    )
+
+                                ? ""
+
+                                : "none";
+
+                        }
+
+                    );
+
+            }
+
+        );
+
+    }
+
+    // =====================================================
+    // ACTIVE TEAM - SUBSTITUTIONS
+    // =====================================================
+
+    const substitutionOut =
+        document.getElementById(
+            "sub-player-out"
+        );
+
+    const substitutionIn =
+        document.getElementById(
+            "sub-player-in"
+        );
+
+    const substitutionButton =
+        document.getElementById(
+            "substitution-button"
+        );
+
+
+    if (
+        substitutionOut
+        &&
+        substitutionIn
+    ) {
+
+        const currentPlayerIds = new Set(
+            initialPlayers.map(
+                player => player.id
+            )
+        );
+
+
+        function refreshSubstitutionCandidates() {
+
+            const selectedOption =
+                substitutionOut.options[
+                    substitutionOut.selectedIndex
+                ];
+
+            const gender =
+                selectedOption
+                    ? selectedOption.dataset.gender
+                    : null;
+
+
+            substitutionIn.value = "";
+
+
+            for (
+                const option
+                of substitutionIn.options
+            ) {
+
+                if (!option.value) {
+                    option.hidden = false;
+                    continue;
+                }
+
+                const sameGender =
+                    option.dataset.gender === gender;
+
+                const alreadyOnTeam =
+                    currentPlayerIds.has(
+                        option.value
+                    );
+
+                option.hidden =
+                    !sameGender
+                    || alreadyOnTeam;
+            }
+
+
+            substitutionIn.disabled =
+                !gender;
+
+
+            if (gender) {
+                substitutionIn.options[0].textContent =
+                    gender === "M"
+                        ? "Vælg ny herrespiller..."
+                        : "Vælg ny damespiller...";
+            }
+            else {
+                substitutionIn.options[0].textContent =
+                    "Vælg først spiller ud...";
+            }
+
+
+            if (substitutionButton) {
+                substitutionButton.disabled = true;
+            }
+        }
+
+
+        substitutionOut.addEventListener(
+            "change",
+            refreshSubstitutionCandidates
+        );
+
+
+        substitutionIn.addEventListener(
+            "change",
+            () => {
+                if (substitutionButton) {
+                    substitutionButton.disabled =
+                        !substitutionOut.value
+                        || !substitutionIn.value;
+                }
+            }
+        );
+
+
+        if (substitutionButton) {
+
+            substitutionButton.addEventListener(
+                "click",
+                event => {
+
+                    if (
+                        !substitutionOut.value
+                        ||
+                        !substitutionIn.value
+                    ) {
+                        event.preventDefault();
+                        return;
+                    }
+
+                    const outName =
+                        substitutionOut.options[
+                            substitutionOut.selectedIndex
+                        ].textContent.trim();
+
+                    const inName =
+                        substitutionIn.options[
+                            substitutionIn.selectedIndex
+                        ].textContent.trim();
+
+                    const confirmed = window.confirm(
+                        `Skift ${outName} ud med ${inName}?\n\nDette bruger 1 af dine {{ rules.max_substitutions }} udskiftninger.`
+                    );
+
+                    if (!confirmed) {
+                        event.preventDefault();
+                    }
+                }
+            );
+        }
+    }
+
+
+    for (
+
+        const player
+
+        of initialPlayers
+
+    ) {
+
+        if (
+
+            player.gender
+
+        ) {
+
+            selectedPlayers.set(
+
+                player.id,
+
+                player
+
+            );
+
+        }
+
+    }
+
+    renderTeam();
+
+</script>
+
+{% endif %}
+
+{% endblock %}
