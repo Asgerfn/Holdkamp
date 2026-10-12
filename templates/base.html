@@ -52,6 +52,96 @@
         href="{{ url_for('static', filename='style.css') }}"
     >
 
+
+    <!-- =====================================================
+         MOBILE NAV OVERRIDES
+         ===================================================== -->
+
+    <style>
+
+        @media (max-width: 820px) {
+
+            .header-inner {
+                flex-wrap: wrap !important;
+                align-items: center !important;
+                row-gap: 10px !important;
+            }
+
+            .header-actions {
+                width: 100% !important;
+                min-width: 0 !important;
+                display: flex !important;
+                flex-wrap: wrap !important;
+                align-items: center !important;
+                gap: 10px !important;
+            }
+
+            .main-nav {
+                width: 100% !important;
+                min-width: 0 !important;
+
+                display: flex !important;
+                flex-wrap: wrap !important;
+                justify-content: flex-start !important;
+
+                gap: 7px !important;
+
+                overflow-x: visible !important;
+                overflow-y: visible !important;
+
+                white-space: normal !important;
+                scrollbar-width: none;
+            }
+
+            .main-nav::-webkit-scrollbar {
+                display: none;
+            }
+
+            .main-nav a {
+                flex: 0 0 auto !important;
+
+                font-size: 13px !important;
+                line-height: 1 !important;
+
+                padding: 10px 12px !important;
+                min-height: 36px;
+
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+
+                white-space: nowrap !important;
+            }
+
+            .header-user {
+                width: 100% !important;
+
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+
+                gap: 10px !important;
+            }
+
+        }
+
+
+        @media (max-width: 480px) {
+
+            .main-nav {
+                gap: 6px !important;
+            }
+
+            .main-nav a {
+                font-size: 12.5px !important;
+                padding: 9px 10px !important;
+                min-height: 34px;
+            }
+
+        }
+
+    </style>
+
 </head>
 
 
@@ -84,69 +174,6 @@
 
 
             <!-- =================================================
-                 LOGO
-                 ================================================= -->
-
-            <a
-                class="brand"
-                href="{{
-                    url_for('dashboard')
-                    if current_user.is_authenticated
-                    else url_for('login')
-                }}"
-            >
-
-                <span
-                    class="brand-mark"
-                    aria-hidden="true"
-                >
-
-                    <svg
-                        viewBox="0 0 64 64"
-                        fill="none"
-                    >
-
-                        <path
-                            d="M20 16L32 4L44 16L38 26H26L20 16Z"
-                            fill="currentColor"
-                        />
-
-                        <path
-                            d="M26 26L20 53M32 26V58M38 26L44 53"
-                            stroke="currentColor"
-                            stroke-width="5"
-                            stroke-linecap="round"
-                        />
-
-                        <path
-                            d="M16 53H48"
-                            stroke="currentColor"
-                            stroke-width="5"
-                            stroke-linecap="round"
-                        />
-
-                    </svg>
-
-                </span>
-
-
-                <span class="brand-text">
-
-                    <strong>
-                        Holdkamp
-                    </strong>
-
-                    <small>
-                        badminton manager
-                    </small>
-
-                </span>
-
-            </a>
-
-
-
-            <!-- =================================================
                  LOGGED IN
                  ================================================= -->
 
@@ -167,17 +194,20 @@
                     >
                         Min klub
                     </a>
-                        
-                    <a href="{{ url_for('pointsystem') }}">
+
+                    <a
+                        href="{{ url_for('pointsystem') }}"
+                        class="{% if request.endpoint == 'pointsystem' %}active{% endif %}"
+                    >
                         Pointsystem
                     </a>
+
                     <a
                         href="{{ url_for('players') }}"
                         class="{% if request.endpoint == 'players' %}active{% endif %}"
                     >
                         Spillere
                     </a>
-
 
                     <a
                         href="{{ url_for('statistics') }}"
@@ -186,12 +216,19 @@
                         Statistik
                     </a>
 
-
                     <a
                         href="{{ url_for('my_team') }}"
                         class="{% if request.endpoint == 'my_team' %}active{% endif %}"
                     >
                         Mit hold
+                    </a>
+
+
+                    <a
+                        href="{{ url_for('about_author') }}"
+                        class="{% if request.endpoint == 'about_author' %}active{% endif %}"
+                    >
+                        Om forfatteren
                     </a>
 
 
@@ -203,7 +240,8 @@
                     >
                         Admin
                     </a>
-                                        <a
+
+                    <a
                         href="{{ url_for('admin_fantasy_teams') }}"
                         class="{% if request.endpoint == 'admin_fantasy_teams' %}active{% endif %}"
                     >

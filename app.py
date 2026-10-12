@@ -42,6 +42,15 @@ from captain_changes import (
     change_team_captain,
 )
 
+from fantasy_rule_adjustments import (
+    ensure_rule_adjustment_table,
+    create_rule_adjustments_for_active_teams,
+    get_pending_rule_adjustments,
+    apply_rule_adjustment_add,
+    apply_rule_adjustment_remove,
+    enforce_due_rule_adjustments,
+)
+
 
 from badmintonplayer import (
     get_club_teams,
@@ -1404,6 +1413,8 @@ def register():
 @admin_required
 def admin_team_builder():
 
+    ensure_rule_adjustment_table()
+
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -1430,6 +1441,32 @@ def admin_team_builder():
 
         if club_row is None:
             abort(404)
+
+
+        # =================================================
+        # CURRENT RULES BEFORE A POSSIBLE CHANGE
+        # =================================================
+
+        cursor.execute(
+            """
+            SELECT
+                male_players,
+                female_players,
+                max_substitutions
+
+            FROM dbo.fantasy_team_rules
+
+            WHERE
+                club_id = ?
+                AND season_id = ?
+            """,
+            current_user.club_id,
+            CURRENT_SEASON,
+        )
+
+        previous_rules_row = (
+            cursor.fetchone()
+        )
 
 
         # =================================================
@@ -1621,13 +1658,83 @@ def admin_team_builder():
                 max_substitutions,
             )
 
+            adjustments_created = []
+
+
+            roster_changed = (
+                previous_rules_row is not None
+                and
+                (
+                    int(
+                        previous_rules_row.male_players
+                    )
+                    != male_players
+                    or
+                    int(
+                        previous_rules_row.female_players
+                    )
+                    != female_players
+                )
+            )
+
+
+            if roster_changed:
+
+                cursor.execute(
+                    """
+                    SELECT SYSUTCDATETIME()
+                    """
+                )
+
+                changed_at = (
+                    cursor.fetchone()[0]
+                )
+
+                adjustments_created = (
+                    create_rule_adjustments_for_active_teams(
+                        cursor=cursor,
+                        club_id=
+                            current_user.club_id,
+                        season_id=
+                            CURRENT_SEASON,
+                        male_required=
+                            male_players,
+                        female_required=
+                            female_players,
+                        changed_at=
+                            changed_at,
+                    )
+                )
+
+
             conn.commit()
 
 
-            flash(
-                "Holdreglerne er gemt.",
-                "success"
-            )
+            if adjustments_created:
+
+                affected_team_count = len(
+                    {
+                        item[
+                            "fantasy_team_id"
+                        ]
+                        for item
+                        in adjustments_created
+                    }
+                )
+
+                flash(
+                    "Holdreglerne er gemt. "
+                    f"{affected_team_count} aktive fantasyhold "
+                    "skal nu tilpasses de nye regler.",
+                    "success"
+                )
+
+            else:
+
+                flash(
+                    "Holdreglerne er gemt.",
+                    "success"
+                )
 
             return redirect(
                 url_for(
@@ -1786,6 +1893,8 @@ def my_team():
 
 
     ensure_captain_change_table()
+
+    ensure_rule_adjustment_table()
 
     conn = get_connection()
 
@@ -1954,6 +2063,10 @@ def my_team():
 
 
                 substitutions_used=0,
+
+
+
+                rule_adjustments=[],
 
 
 
@@ -2468,6 +2581,74 @@ def my_team():
 
 
         # =================================================
+        # AUTO-ENFORCE OVERDUE REMOVE ADJUSTMENTS
+        # =================================================
+
+        if (
+            team is not None
+            and
+            team[
+                "status"
+            ]
+            == "active"
+        ):
+
+            cursor.execute(
+                """
+                SELECT SYSUTCDATETIME()
+                """
+            )
+
+            adjustment_now = (
+                cursor.fetchone()[0]
+            )
+
+            auto_removed = (
+                enforce_due_rule_adjustments(
+                    cursor=cursor,
+                    club_id=
+                        current_user.club_id,
+                    season_id=
+                        CURRENT_SEASON,
+                    as_of=
+                        adjustment_now,
+                    infer_null_deadline=
+                        False,
+                )
+            )
+
+            if auto_removed:
+
+                conn.commit()
+
+                removed_names = ", ".join(
+                    item[
+                        "player_name"
+                    ]
+                    for item
+                    in auto_removed
+                    if (
+                        item.get(
+                            "fantasy_team_id"
+                        )
+                        ==
+                        team[
+                            "id"
+                        ]
+                    )
+                )
+
+                if removed_names:
+
+                    flash(
+                        "Holdreglernes frist er passeret. "
+                        "Systemet har derfor automatisk fjernet: "
+                        f"{removed_names}.",
+                        "success"
+                    )
+
+
+        # =================================================
 
         # HANDLE POST
 
@@ -2493,9 +2674,231 @@ def my_team():
                 "activate",
                 "substitute",
                 "change_captain",
+                "rule_add",
+                "rule_remove",
             }:
 
                 action = "save"
+
+
+            # =====================================================
+            # FREE RULE ADJUSTMENT
+            # =====================================================
+
+            if action in {
+                "rule_add",
+                "rule_remove",
+            }:
+
+                if (
+                    team is None
+                    or
+                    team[
+                        "status"
+                    ]
+                    != "active"
+                ):
+
+                    flash(
+                        "Regeltilpasninger gælder kun "
+                        "for aktive fantasyhold.",
+                        "error"
+                    )
+
+                    return redirect(
+                        url_for(
+                            "my_team"
+                        )
+                    )
+
+
+                try:
+
+                    adjustment_id = int(
+                        request.form.get(
+                            "adjustment_id",
+                            0
+                        )
+                    )
+
+                except (
+                    TypeError,
+                    ValueError
+                ):
+
+                    adjustment_id = 0
+
+
+                if adjustment_id <= 0:
+
+                    flash(
+                        "Regeltilpasningen kunne ikke findes.",
+                        "error"
+                    )
+
+                    return redirect(
+                        url_for(
+                            "my_team"
+                        )
+                    )
+
+
+                try:
+
+                    if action == "rule_add":
+
+                        player_in_id = (
+                            request.form
+                            .get(
+                                "player_in",
+                                ""
+                            )
+                            .strip()
+                        )
+
+
+                        if not player_in_id:
+
+                            raise ValueError(
+                                "Du skal vælge en spiller "
+                                "at tilføje."
+                            )
+
+
+                        result = (
+                            apply_rule_adjustment_add(
+                                cursor=cursor,
+                                adjustment_id=
+                                    adjustment_id,
+                                fantasy_team_id=
+                                    team[
+                                        "id"
+                                    ],
+                                badminton_id=
+                                    player_in_id,
+                            )
+                        )
+
+
+                        conn.commit()
+
+
+                        captain_text = (
+                            " Spilleren er samtidig blevet kaptajn, "
+                            "fordi holdet stod uden en aktiv kaptajn."
+                            if result.get(
+                                "became_captain"
+                            )
+                            else ""
+                        )
+
+
+                        flash(
+                            f"{result['player_name']} er tilføjet "
+                            "gratis efter regelændringen. "
+                            "Spilleren får kun point fra nu af."
+                            f"{captain_text}",
+                            "success"
+                        )
+
+
+                    else:
+
+                        player_out_id = (
+                            request.form
+                            .get(
+                                "player_out",
+                                ""
+                            )
+                            .strip()
+                        )
+
+
+                        if not player_out_id:
+
+                            raise ValueError(
+                                "Du skal vælge en spiller "
+                                "at fjerne."
+                            )
+
+
+                        result = (
+                            apply_rule_adjustment_remove(
+                                cursor=cursor,
+                                adjustment_id=
+                                    adjustment_id,
+                                fantasy_team_id=
+                                    team[
+                                        "id"
+                                    ],
+                                badminton_id=
+                                    player_out_id,
+                            )
+                        )
+
+
+                        conn.commit()
+
+
+                        if (
+                            result[
+                                "was_captain"
+                            ]
+                            and
+                            result.get(
+                                "new_captain_id"
+                            )
+                        ):
+
+                            captain_text = (
+                                " Kaptajnen blev flyttet gratis "
+                                "til en anden aktiv spiller."
+                            )
+
+                        elif result[
+                            "was_captain"
+                        ]:
+
+                            captain_text = (
+                                " Holdet står midlertidigt uden kaptajn. "
+                                "Den næste spiller, der tilføjes via "
+                                "regeltilpasningen, bliver kaptajn."
+                            )
+
+                        else:
+
+                            captain_text = ""
+
+
+                        flash(
+                            f"{result['player_name']} er fjernet "
+                            "gratis efter regelændringen."
+                            f"{captain_text}",
+                            "success"
+                        )
+
+
+                except ValueError as e:
+
+                    conn.rollback()
+
+                    flash(
+                        str(e),
+                        "error"
+                    )
+
+
+                except Exception:
+
+                    conn.rollback()
+                    raise
+
+
+                return redirect(
+                    url_for(
+                        "my_team"
+                    )
+                )
 
 
             # =====================================================
@@ -4329,6 +4732,100 @@ def my_team():
 
 
         # =================================================
+        # PENDING RULE ADJUSTMENTS
+        # =================================================
+
+        rule_adjustments = []
+
+
+        if (
+            team is not None
+            and
+            team[
+                "status"
+            ]
+            == "active"
+        ):
+
+            rule_adjustments = (
+                get_pending_rule_adjustments(
+                    cursor=cursor,
+                    fantasy_team_id=
+                        team[
+                            "id"
+                        ],
+                )
+            )
+
+
+            selected_ids = {
+                str(
+                    player[
+                        "badminton_id"
+                    ]
+                )
+                for player
+                in selected_players
+            }
+
+
+            for adjustment in rule_adjustments:
+
+                if (
+                    adjustment[
+                        "direction"
+                    ]
+                    == "add"
+                ):
+
+                    adjustment[
+                        "candidates"
+                    ] = [
+                        player
+                        for player
+                        in players
+                        if (
+                            player[
+                                "gender"
+                            ]
+                            ==
+                            adjustment[
+                                "gender"
+                            ]
+                            and
+                            str(
+                                player[
+                                    "badminton_id"
+                                ]
+                            )
+                            not in selected_ids
+                        )
+                    ]
+
+                else:
+
+                    adjustment[
+                        "candidates"
+                    ] = [
+                        player
+                        for player
+                        in selected_players
+                        if (
+                            player[
+                                "gender"
+                            ]
+                            ==
+                            adjustment[
+                                "gender"
+                            ]
+                        )
+                    ]
+
+
+            conn.commit()
+
+
+        # =================================================
 
         # RENDER
 
@@ -4367,6 +4864,12 @@ def my_team():
             substitutions_used=
 
                 substitutions_used,
+
+
+
+            rule_adjustments=
+
+                rule_adjustments,
 
 
 
@@ -5497,53 +6000,38 @@ def statistics():
     ]
 
 
-    most_wins = (
-        max(
-            players_with_matches,
-            key=lambda p: (
-                p["wins"],
-                (p["win_percentage"] or 0),
-                p["fantasy_points"],
-            )
+    # Top 3 efter antal sejre.
+    most_wins = sorted(
+        players_with_matches,
+        key=lambda p: (
+            -p["wins"],
+            -(p["win_percentage"] or 0),
+            -p["fantasy_points"],
+            p["player_name"].lower(),
         )
-        if players_with_matches
-        else None
-    )
+    )[:3]
 
 
-    most_matches = (
-        max(
-            players_with_matches,
-            key=lambda p: (
-                p["matches_played"],
-                p["wins"],
-                p["fantasy_points"],
-            )
-        )
-        if players_with_matches
-        else None
-    )
-
-
+    # Sejrsprocent kræver mindst 3 spillede kampe.
     win_rate_candidates = [
         player
         for player in players
-        if player["matches_played"] >= 3
+        if (
+            player["matches_played"] >= 3
+            and player["win_percentage"] is not None
+        )
     ]
 
 
-    best_win_rate = (
-        max(
-            win_rate_candidates,
-            key=lambda p: (
-                (p["win_percentage"] or 0),
-                p["wins"],
-                p["fantasy_points"],
-            )
+    best_win_rate = sorted(
+        win_rate_candidates,
+        key=lambda p: (
+            -p["win_percentage"],
+            -p["wins"],
+            -p["fantasy_points"],
+            p["player_name"].lower(),
         )
-        if win_rate_candidates
-        else None
-    )
+    )[:3]
 
 
     highlights = {
@@ -5552,9 +6040,6 @@ def statistics():
 
         "most_wins":
             most_wins,
-
-        "most_matches":
-            most_matches,
 
         "best_win_rate":
             best_win_rate,
@@ -6354,6 +6839,8 @@ def admin_delete_fantasy_team(
 
     ensure_captain_change_table()
 
+    ensure_rule_adjustment_table()
+
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -6396,6 +6883,14 @@ def admin_delete_fantasy_team(
         # cascade rules, so the behaviour is predictable
         # across the existing database schema.
         # -------------------------------------------------
+
+        cursor.execute(
+            """
+            DELETE FROM dbo.fantasy_team_rule_adjustments
+            WHERE fantasy_team_id = ?
+            """,
+            fantasy_team_id,
+        )
 
         cursor.execute(
             """
@@ -7101,6 +7596,19 @@ def refresh_admin_teams():
 # =========================================================
 # ADMIN - SAVE SELECTED DASHBOARD TEAMS
 # =========================================================
+
+
+# =========================================================
+# ABOUT THE AUTHOR
+# =========================================================
+
+@app.route("/about-author")
+@login_required
+def about_author():
+    return render_template(
+        "about_author.html"
+    )
+
 # =========================================================
 # POINTSYSTEM
 # =========================================================

@@ -1,0 +1,616 @@
+{% extends "base.html" %}
+
+{% block title %}
+Om forfatteren · Holdkamp
+{% endblock %}
+
+{% block content %}
+
+<style>
+
+    .author-page {
+        max-width: 1180px;
+        margin: 0 auto;
+    }
+
+    .author-hero {
+        display: grid;
+        grid-template-columns:
+            minmax(0, 1fr)
+            minmax(340px, .82fr);
+        gap: 26px;
+        align-items: stretch;
+        margin-bottom: 24px;
+    }
+
+    .author-copy,
+    .author-image-card,
+    .author-card {
+        border:
+            1px solid
+            rgba(255,255,255,.08);
+        background:
+            rgba(15,25,40,.78);
+        border-radius: 20px;
+    }
+
+    .author-copy {
+        padding: 34px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 470px;
+    }
+
+    .author-eyebrow {
+        display: inline-flex;
+        width: fit-content;
+        margin-bottom: 14px;
+        padding: 7px 11px;
+        border:
+            1px solid
+            rgba(255,255,255,.09);
+        border-radius: 999px;
+        background:
+            rgba(255,255,255,.04);
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+
+    .author-copy h1 {
+        margin: 0;
+        font-size: clamp(38px, 6vw, 70px);
+        line-height: .98;
+        letter-spacing: -.045em;
+    }
+
+    .author-subtitle {
+        max-width: 650px;
+        margin: 20px 0 0;
+        color: var(--muted);
+        font-size: 17px;
+        line-height: 1.7;
+    }
+
+    .author-warning {
+        margin-top: 22px;
+        padding: 14px 16px;
+        border-radius: 13px;
+        border:
+            1px solid
+            rgba(255, 205, 92, .22);
+        background:
+            rgba(255, 205, 92, .07);
+        font-size: 12px;
+        line-height: 1.55;
+    }
+
+    .author-image-card {
+        overflow: hidden;
+        min-height: 470px;
+        position: relative;
+    }
+
+    .author-image-card img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        min-height: 470px;
+        object-fit: cover;
+    }
+
+    .author-image-caption {
+        position: absolute;
+        left: 14px;
+        right: 14px;
+        bottom: 14px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        background:
+            rgba(4, 12, 23, .80);
+        backdrop-filter: blur(10px);
+        font-size: 12px;
+        line-height: 1.45;
+    }
+
+    .author-image-caption strong {
+        display: block;
+        margin-bottom: 2px;
+        font-size: 13px;
+    }
+
+
+    /* =====================================================
+       FAKE TROPHY CABINET
+       ===================================================== */
+
+    .author-grid {
+        display: grid;
+        grid-template-columns:
+            repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+
+    .author-stat {
+        padding: 20px;
+        min-height: 130px;
+        border:
+            1px solid
+            rgba(255,255,255,.07);
+        background:
+            rgba(15,25,40,.70);
+        border-radius: 16px;
+    }
+
+    .author-stat span {
+        display: block;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: .07em;
+        text-transform: uppercase;
+    }
+
+    .author-stat strong {
+        display: block;
+        margin-top: 12px;
+        font-size: 28px;
+        line-height: 1;
+    }
+
+    .author-stat small {
+        display: block;
+        margin-top: 9px;
+        color: var(--muted);
+        line-height: 1.4;
+    }
+
+
+    /* =====================================================
+       CAREER
+       ===================================================== */
+
+    .author-card {
+        padding: 28px;
+        margin-bottom: 22px;
+    }
+
+    .author-card-heading {
+        margin-bottom: 22px;
+    }
+
+    .author-card-heading span {
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+    }
+
+    .author-card-heading h2 {
+        margin: 5px 0 0;
+        font-size: 25px;
+    }
+
+    .career-list {
+        display: grid;
+        gap: 0;
+    }
+
+    .career-row {
+        display: grid;
+        grid-template-columns:
+            80px minmax(0, 1fr);
+        gap: 18px;
+        padding: 17px 0;
+        border-bottom:
+            1px solid
+            rgba(255,255,255,.06);
+    }
+
+    .career-row:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    .career-row:first-child {
+        padding-top: 0;
+    }
+
+    .career-year {
+        color: #5eead4;
+        font-size: 13px;
+        font-weight: 900;
+    }
+
+    .career-copy strong {
+        display: block;
+        font-size: 15px;
+    }
+
+    .career-copy p {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+    }
+
+
+    /* =====================================================
+       QUOTES / SCOUTING
+       ===================================================== */
+
+    .scouting-grid {
+        display: grid;
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .scouting-item {
+        padding: 18px;
+        border:
+            1px solid
+            rgba(255,255,255,.06);
+        border-radius: 14px;
+        background:
+            rgba(255,255,255,.025);
+    }
+
+    .scouting-item strong {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 13px;
+    }
+
+    .scouting-item p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+    }
+
+    .author-footer-joke {
+        margin-top: 24px;
+        text-align: center;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.6;
+    }
+
+
+    /* =====================================================
+       MOBILE
+       ===================================================== */
+
+    @media (max-width: 900px) {
+
+        .author-hero {
+            grid-template-columns: 1fr;
+        }
+
+        .author-copy {
+            min-height: 0;
+        }
+
+        .author-grid {
+            grid-template-columns:
+                repeat(2, minmax(0, 1fr));
+        }
+
+        .scouting-grid {
+            grid-template-columns: 1fr;
+        }
+
+    }
+
+    @media (max-width: 520px) {
+
+        .author-copy,
+        .author-card {
+            padding: 19px;
+        }
+
+        .author-copy h1 {
+            font-size: 42px;
+        }
+
+        .author-subtitle {
+            font-size: 14px;
+        }
+
+        .author-image-card,
+        .author-image-card img {
+            min-height: 390px;
+        }
+
+        .author-grid {
+            gap: 8px;
+        }
+
+        .author-stat {
+            padding: 14px;
+            min-height: 112px;
+        }
+
+        .author-stat strong {
+            font-size: 22px;
+        }
+
+        .career-row {
+            grid-template-columns:
+                58px minmax(0, 1fr);
+            gap: 10px;
+        }
+
+    }
+
+</style>
+
+
+<div class="author-page">
+
+    <section class="author-hero">
+
+        <div class="author-copy">
+
+            <span class="author-eyebrow">
+                About the author · helt objektiv biografi
+            </span>
+
+            <h1>
+                Sofus Eriksen
+            </h1>
+
+            <p class="author-subtitle">
+                Udvikler, dataentusiast og — ifølge et meget
+                selektivt udvalg af statistikker — den mest
+                dominerende badmintonspiller sporten nogensinde
+                har været nødt til at forholde sig til.
+            </p>
+
+            <div class="author-warning">
+                <strong>Juridisk nødvendigt forbehold:</strong>
+                Titlerne på denne side er muligvis ikke anerkendt
+                af BWF, DIF, IOC, Badminton Danmark eller personer
+                med adgang til Google. Siden er med andre ord
+                fuldstændig seriøs.
+            </div>
+
+        </div>
+
+
+        <div class="author-image-card">
+
+            <img
+                src="{{ url_for(
+                    'static',
+                    filename='klubbens_hardeste_smash.png'
+                ) }}"
+                alt="Sofus demonstrerer klubbens hårdeste smash"
+            >
+
+            <div class="author-image-caption">
+
+                <strong>
+                    Sjældent arkivmateriale
+                </strong>
+
+                Fotografiet er taget kort før hallens
+                forsikringsselskab bad om en forklaring.
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <section class="author-grid">
+
+        <article class="author-stat">
+            <span>Verdensmesterskaber</span>
+            <strong>17</strong>
+            <small>
+                Heraf 16 afholdt uden andre deltagere.
+            </small>
+        </article>
+
+        <article class="author-stat">
+            <span>All England</span>
+            <strong>11×</strong>
+            <small>
+                Primært i Excel og én gang i en drøm.
+            </small>
+        </article>
+
+        <article class="author-stat">
+            <span>OL-guld</span>
+            <strong>4</strong>
+            <small>
+                IOC er endnu ikke vendt tilbage på mail.
+            </small>
+        </article>
+
+        <article class="author-stat">
+            <span>Smashhastighed</span>
+            <strong>612 km/t</strong>
+            <small>
+                Målt af spilleren selv. Ingen vidner.
+            </small>
+        </article>
+
+    </section>
+
+
+    <section class="author-card">
+
+        <div class="author-card-heading">
+            <span>Den officielle historiebog</span>
+            <h2>Udvalgte karrierehøjdepunkter</h2>
+        </div>
+
+        <div class="career-list">
+
+            <div class="career-row">
+                <div class="career-year">2026</div>
+                <div class="career-copy">
+                    <strong>
+                        Klubbens hårdeste smash
+                    </strong>
+                    <p>
+                        Vandt prisen efter en intens afstemning,
+                        hvor 100 % af stemmerne blev afgivet af
+                        Sofus Eriksen.
+                    </p>
+                </div>
+            </div>
+
+            <div class="career-row">
+                <div class="career-year">2025</div>
+                <div class="career-copy">
+                    <strong>
+                        Uofficiel verdensmester i tredjesæt
+                    </strong>
+                    <p>
+                        Især stærk når modstanderen er træt,
+                        skadet eller ikke er mødt op.
+                    </p>
+                </div>
+            </div>
+
+            <div class="career-row">
+                <div class="career-year">2024</div>
+                <div class="career-copy">
+                    <strong>
+                        All England Champion*
+                    </strong>
+                    <p>
+                        *Turneringen foregik i et regneark.
+                        Finalen blev vundet 21-0, 21-0 efter en
+                        mindre fejl i VLOOKUP.
+                    </p>
+                </div>
+            </div>
+
+            <div class="career-row">
+                <div class="career-year">2023</div>
+                <div class="career-copy">
+                    <strong>
+                        Europarekord i “den var altså ude”
+                    </strong>
+                    <p>
+                        Rekorden står stadig, blandt andet fordi
+                        ingen officiel organisation fører den
+                        statistik.
+                    </p>
+                </div>
+            </div>
+
+            <div class="career-row">
+                <div class="career-year">2022</div>
+                <div class="career-copy">
+                    <strong>
+                        Årets mest taktiske spiller
+                    </strong>
+                    <p>
+                        Opdagede at den nemmeste måde at undgå
+                        uprovokerede fejl er slet ikke at ramme
+                        bolden.
+                    </p>
+                </div>
+            </div>
+
+            <div class="career-row">
+                <div class="career-year">2019</div>
+                <div class="career-copy">
+                    <strong>
+                        Optaget i Badminton Hall of Fame
+                    </strong>
+                    <p>
+                        Den pågældende Hall of Fame viste sig
+                        senere at være en Messenger-gruppe.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <section class="author-card">
+
+        <div class="author-card-heading">
+            <span>Scoutingrapport</span>
+            <h2>Hvorfor er han så svær at spille imod?</h2>
+        </div>
+
+        <div class="scouting-grid">
+
+            <article class="scouting-item">
+                <strong>Smash</strong>
+                <p>
+                    Så hårdt at fjerbolden efter sigende skal
+                    køle ned i 20 minutter efter kampen.
+                </p>
+            </article>
+
+            <article class="scouting-item">
+                <strong>Fodarbejde</strong>
+                <p>
+                    Beskrives bedst som “uforudsigeligt”.
+                    Hverken modstander eller spiller ved helt,
+                    hvor næste skridt ender.
+                </p>
+            </article>
+
+            <article class="scouting-item">
+                <strong>Mental styrke</strong>
+                <p>
+                    Har aldrig tabt en diskussion om,
+                    hvorvidt en bold var inde eller ude.
+                </p>
+            </article>
+
+            <article class="scouting-item">
+                <strong>Taktisk forståelse</strong>
+                <p>
+                    Kan bruge op til 45 minutter på at analysere
+                    en kamp, der varede 18.
+                </p>
+            </article>
+
+            <article class="scouting-item">
+                <strong>Dataanalyse</strong>
+                <p>
+                    Hvis statistikken siger noget negativt,
+                    tilføjes der som regel bare et nyt filter.
+                </p>
+            </article>
+
+            <article class="scouting-item">
+                <strong>Selvtillid</strong>
+                <p>
+                    Den eneste egenskab hvor datagrundlaget
+                    faktisk vurderes statistisk signifikant.
+                </p>
+            </article>
+
+        </div>
+
+    </section>
+
+
+    <div class="author-footer-joke">
+        Denne side er skrevet med samme metodiske stringens
+        som smashhastigheden på 612 km/t.
+    </div>
+
+</div>
+
+{% endblock %}

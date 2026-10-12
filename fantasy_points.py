@@ -8,6 +8,15 @@ from fantasy_points_database import (
     ensure_fantasy_point_tables,
 )
 
+from captain_changes import (
+    ensure_captain_change_table,
+)
+
+from fantasy_rule_adjustments import (
+    ensure_rule_adjustment_table,
+    enforce_due_rule_adjustments,
+)
+
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(
@@ -226,6 +235,8 @@ def get_match(
 
             club_team_name,
 
+            match_time,
+
             home_team,
             away_team,
 
@@ -262,6 +273,9 @@ def get_match(
 
         "club_team_name":
             row.club_team_name,
+
+        "match_time":
+            row.match_time,
 
         "home_team":
             row.home_team,
@@ -1343,6 +1357,10 @@ def recalculate_match_points(
 
     ensure_fantasy_point_tables()
 
+    ensure_captain_change_table()
+
+    ensure_rule_adjustment_table()
+
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -1355,6 +1373,47 @@ def recalculate_match_points(
             club_match_id=
                 club_match_id,
         )
+
+
+        # =================================================
+        # ENFORCE ROSTER RULE CHANGES BEFORE THIS MATCH
+        # =================================================
+
+        auto_removed = (
+            enforce_due_rule_adjustments(
+                cursor=cursor,
+                club_id=
+                    match[
+                        "club_id"
+                    ],
+                season_id=
+                    match[
+                        "season_id"
+                    ],
+                as_of=
+                    match[
+                        "match_time"
+                    ],
+                infer_null_deadline=
+                    True,
+            )
+        )
+
+
+        if auto_removed:
+
+            conn.commit()
+
+            print(
+                "Automatisk regeltilpasning:",
+                ", ".join(
+                    item[
+                        "player_name"
+                    ]
+                    for item
+                    in auto_removed
+                )
+            )
 
 
         games = get_games(
