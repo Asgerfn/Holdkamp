@@ -1,259 +1,126 @@
 {% extends "base.html" %}
 
-
-
 {% block title %}
-
 Statistik · {{ club.name }}
-
 {% endblock %}
-
-
 
 {% block content %}
 
-
-
 <style>
 
-
-
     .statistics-page {
-
         max-width: 1250px;
-
         margin: 0 auto;
-
     }
 
-
-
-
-
     /* =====================================================
-
        HEADER
-
        ===================================================== */
-
-
 
     .statistics-header {
-
         display: flex;
-
         justify-content: space-between;
-
         gap: 24px;
-
         align-items: flex-end;
-
         margin-bottom: 28px;
-
     }
-
-
 
     .statistics-header h1 {
-
         margin: 4px 0 7px;
-
         font-size: 32px;
-
     }
-
-
 
     .statistics-header p {
-
         margin: 0;
-
         color: var(--muted);
-
     }
-
-
 
     .season-pill {
-
         padding: 8px 12px;
-
         border-radius: 999px;
-
         border: 1px solid rgba(255,255,255,.09);
-
         background: rgba(255,255,255,.04);
-
         font-size: 12px;
-
         font-weight: 800;
-
         white-space: nowrap;
-
     }
 
-
-
-
-
     /* =====================================================
-
        SUMMARY KPI'S
-
        ===================================================== */
-
-
 
     .summary-grid {
-
         display: grid;
-
         grid-template-columns:
-
             repeat(5, minmax(0, 1fr));
-
         gap: 12px;
-
         margin-bottom: 22px;
-
     }
-
-
 
     .summary-card {
-
         border: 1px solid rgba(255,255,255,.08);
-
         background: rgba(15,25,40,.78);
-
         border-radius: 16px;
-
         padding: 18px;
-
         min-width: 0;
-
     }
-
-
 
     .summary-label {
-
         display: block;
-
         color: var(--muted);
-
         font-size: 11px;
-
         font-weight: 700;
-
         text-transform: uppercase;
-
         letter-spacing: .06em;
-
         margin-bottom: 8px;
-
     }
-
-
 
     .summary-value {
-
         display: block;
-
         font-size: 27px;
-
         line-height: 1;
-
     }
-
-
-
-
 
     /* =====================================================
-
        HIGHLIGHTS
-
        ===================================================== */
 
-
-
     .highlight-grid {
-
         display: grid;
-
         grid-template-columns:
-
             repeat(4, minmax(0, 1fr));
-
         gap: 12px;
-
         margin-bottom: 28px;
-
     }
-
-
 
     .highlight-card {
-
         border: 1px solid rgba(255,255,255,.08);
-
         background: rgba(255,255,255,.025);
-
         border-radius: 16px;
-
         padding: 18px;
-
     }
-
-
 
     .highlight-kicker {
-
         display: block;
-
         color: var(--muted);
-
         font-size: 11px;
-
         font-weight: 800;
-
         text-transform: uppercase;
-
         letter-spacing: .06em;
-
         margin-bottom: 8px;
-
     }
-
-
 
     .highlight-name {
-
         display: block;
-
         font-size: 17px;
-
         line-height: 1.25;
-
         margin-bottom: 5px;
-
     }
-
-
 
     .highlight-stat {
-
         color: var(--muted);
-
         font-size: 13px;
-
     }
-
-
-
-
-
 
     .highlight-ranking {
         display: grid;
@@ -266,7 +133,6 @@ Statistik · {{ club.name }}
         grid-template-columns: 22px minmax(0, 1fr) auto;
         align-items: center;
         gap: 8px;
-
         padding-top: 8px;
         border-top: 1px solid rgba(255,255,255,.06);
     }
@@ -314,197 +180,96 @@ Statistik · {{ club.name }}
         font-size: 10px;
     }
 
-
     /* =====================================================
-
        CONTENT GRID
-
        ===================================================== */
-
-
 
     .statistics-layout {
-
         display: grid;
-
         grid-template-columns: minmax(0, 1fr);
-
         gap: 22px;
-
         align-items: start;
-
     }
-
-
 
     .statistics-card {
-
         border-radius: 18px;
-
         border: 1px solid rgba(255,255,255,.08);
-
         background: rgba(15,25,40,.78);
-
         padding: 22px;
-
         min-width: 0;
-
     }
-
-
 
     .card-heading {
-
         display: flex;
-
         justify-content: space-between;
-
         gap: 16px;
-
         align-items: flex-start;
-
         margin-bottom: 18px;
-
     }
-
-
 
     .card-heading h2 {
-
         margin: 0;
-
         font-size: 20px;
-
     }
-
-
 
     .card-copy {
-
         margin: 6px 0 0;
-
         color: var(--muted);
-
         font-size: 13px;
-
         line-height: 1.5;
-
     }
 
-
-
-
-
     /* =====================================================
-
        FILTERS
-
        ===================================================== */
-
-
 
     .player-tools {
-
         display: flex;
-
         gap: 10px;
-
         flex-wrap: wrap;
-
         margin-bottom: 15px;
-
     }
-
-
 
     .player-search {
-
         flex: 1 1 250px;
-
         min-width: 0;
-
         border: 1px solid rgba(255,255,255,.10);
-
         background: rgba(255,255,255,.04);
-
         color: inherit;
-
         padding: 10px 12px;
-
         border-radius: 10px;
-
         font: inherit;
-
         outline: none;
-
     }
-
-
 
     .filter-buttons {
-
         display: flex;
-
         gap: 6px;
-
     }
-
-
 
     .filter-button {
-
         border: 1px solid rgba(255,255,255,.09);
-
         background: rgba(255,255,255,.03);
-
         color: inherit;
-
         border-radius: 9px;
-
         padding: 9px 11px;
-
         font: inherit;
-
         font-size: 12px;
-
         font-weight: 700;
-
         cursor: pointer;
-
     }
-
-
 
     .filter-button.active {
-
         background: white;
-
         color: #07111f;
-
         border-color: white;
-
     }
 
-
-
-
-
     /* =====================================================
-
        TABLES
-
        ===================================================== */
 
-
-
-
     .table-wrap {
-
-        /*
-         * The player table now gets its own scroll area.
-         * The horizontal scrollbar therefore stays available
-         * while you move up/down through the player list.
-         */
         position: relative;
         width: 100%;
         max-height: min(72vh, 720px);
@@ -518,55 +283,30 @@ Statistik · {{ club.name }}
 
         border-top: 1px solid rgba(255,255,255,.05);
         border-bottom: 1px solid rgba(255,255,255,.05);
-
     }
-
-
-
 
     .statistics-table {
-
         width: 100%;
-
         border-collapse: separate;
         border-spacing: 0;
-
         min-width: 1680px;
-
     }
-
-
 
     .statistics-table th,
-
     .statistics-table td {
-
         padding: 12px 10px;
-
         text-align: left;
-
         border-bottom: 1px solid rgba(255,255,255,.06);
-
         font-size: 13px;
-
     }
 
-
-
     .statistics-table th {
-
         color: var(--muted);
-
         font-size: 10px;
-
         text-transform: uppercase;
-
         letter-spacing: .06em;
-
         font-weight: 800;
-
         white-space: nowrap;
-
 
         position: sticky;
         top: 0;
@@ -574,356 +314,239 @@ Statistik · {{ club.name }}
 
         background: #0b1625;
         box-shadow: 0 1px 0 rgba(255,255,255,.09);
-
     }
-
-
 
     .statistics-table tbody tr:last-child td {
-
         border-bottom: 0;
-
     }
-
-
 
     .rank-cell {
-
         width: 35px;
-
         color: var(--muted);
-
         font-weight: 800;
-
     }
-
-
 
     .player-name {
-
         font-weight: 750;
-
     }
 
-
+    .player-name-mobile {
+        display: none;
+    }
 
     .gender-tag {
-
         display: inline-flex;
-
         align-items: center;
-
         justify-content: center;
-
         width: 25px;
-
         height: 25px;
-
         border-radius: 999px;
-
         border: 1px solid rgba(255,255,255,.08);
-
         background: rgba(255,255,255,.04);
-
         font-size: 10px;
-
         font-weight: 900;
-
     }
-
-
 
     .points-cell {
-
         font-weight: 850;
-
     }
-
-
 
     .numeric-cell {
-
         white-space: nowrap;
-
         font-variant-numeric: tabular-nums;
-
     }
-
-
 
     .stat-help {
-
         display: block;
-
         margin-top: 3px;
-
         color: var(--muted);
-
         font-size: 9px;
-
         font-weight: 600;
-
         text-transform: none;
-
         letter-spacing: 0;
-
         line-height: 1.25;
-
     }
-
-
 
     .muted-cell {
-
         color: var(--muted);
-
     }
 
-
-
-
-
     /* =====================================================
-
        FANTASY LEADERBOARD
-
        ===================================================== */
-
-
 
     .fantasy-list {
-
         display: flex;
-
         flex-direction: column;
-
         gap: 9px;
-
     }
-
-
 
     .fantasy-row {
-
         display: grid;
-
         grid-template-columns:
-
             34px minmax(0, 1fr) auto;
-
         gap: 10px;
-
         align-items: center;
-
         padding: 12px;
-
         border-radius: 12px;
-
         border: 1px solid rgba(255,255,255,.06);
-
         background: rgba(255,255,255,.025);
-
     }
-
-
 
     .fantasy-rank {
-
         color: var(--muted);
-
         font-size: 12px;
-
         font-weight: 850;
-
     }
-
-
 
     .fantasy-team-name {
-
         display: block;
-
         font-weight: 800;
-
         font-size: 13px;
-
     }
-
-
 
     .fantasy-owner {
-
         display: block;
-
         color: var(--muted);
-
         font-size: 11px;
-
         margin-top: 3px;
-
     }
-
-
 
     .fantasy-points {
-
         font-weight: 900;
-
         white-space: nowrap;
-
     }
-
-
 
     .fantasy-substitutions {
-
         grid-column: 2 / 4;
-
         color: var(--muted);
-
         font-size: 10px;
-
         margin-top: -3px;
-
     }
-
-
 
     .empty-state {
-
         padding: 35px 10px;
-
         text-align: center;
-
         color: var(--muted);
-
         font-size: 13px;
-
     }
 
-
-
-
-
     /* =====================================================
-
        RESPONSIVE
-
        ===================================================== */
-
-
 
     @media (max-width: 1050px) {
 
-
-
         .summary-grid {
-
             grid-template-columns:
-
                 repeat(3, minmax(0, 1fr));
-
         }
-
-
 
         .highlight-grid {
-
             grid-template-columns:
-
                 repeat(2, minmax(0, 1fr));
-
         }
-
-
 
         .statistics-layout {
-
             grid-template-columns: 1fr;
-
         }
-
     }
 
+    @media (max-width: 700px) {
 
+        .table-wrap {
+            max-height: 68vh;
+        }
 
+        /*
+         * Keep the player column visible while the user
+         * scrolls horizontally through the statistics table.
+         * The rank column is intentionally allowed to scroll away.
+         */
+        .statistics-table th:nth-child(2),
+        .statistics-table td.player-name {
+            position: sticky;
+            left: 0;
+        }
 
+        .statistics-table th:nth-child(2) {
+            z-index: 20;
+
+            min-width: 110px;
+            width: 110px;
+            max-width: 110px;
+
+            background: #0b1625;
+
+            box-shadow:
+                8px 0 12px -10px
+                rgba(0, 0, 0, 0.85);
+        }
+
+        .statistics-table td.player-name {
+            z-index: 5;
+
+            min-width: 110px;
+            width: 110px;
+            max-width: 110px;
+
+            background: #0f1928;
+
+            box-shadow:
+                8px 0 12px -10px
+                rgba(0, 0, 0, 0.85);
+
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .player-name-full {
+            display: none;
+        }
+
+        .player-name-mobile {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
 
     @media (max-width: 650px) {
 
-
-
         .statistics-header {
-
             align-items: flex-start;
-
             flex-direction: column;
-
         }
-
-
 
         .summary-grid {
-
             grid-template-columns:
-
                 repeat(2, minmax(0, 1fr));
-
         }
-
-
 
         .highlight-grid {
-
             grid-template-columns: 1fr 1fr;
-
         }
-
-
 
         .statistics-card {
-
             padding: 16px;
-
         }
-
-
 
         .player-tools {
-
             flex-direction: column;
-
         }
-
-
 
         .filter-buttons {
-
             width: 100%;
-
         }
-
-
 
         .filter-button {
-
             flex: 1;
-
         }
-
     }
 
-
-
-
-
     @media (max-width: 430px) {
-
-        /*
-         * Mobile statistics should stay compact.
-         * Keep the KPI/highlight cards in two columns instead
-         * of turning every card into a full-width block.
-         */
 
         .statistics-page {
             font-size: 14px;
@@ -947,7 +570,6 @@ Statistik · {{ club.name }}
             font-size: 11px;
             padding: 8px 11px;
         }
-
 
         .summary-grid {
             grid-template-columns:
@@ -974,16 +596,10 @@ Statistik · {{ club.name }}
             font-size: 22px;
         }
 
-        /*
-         * There are currently five KPI cards.
-         * Let the last one use the full row so the layout
-         * ends cleanly instead of leaving an empty half-row.
-         */
         .summary-card:last-child {
             grid-column: 1 / -1;
             min-height: 78px;
         }
-
 
         .highlight-grid {
             grid-template-columns:
@@ -1042,7 +658,6 @@ Statistik · {{ club.name }}
             font-size: 9px;
         }
 
-
         .statistics-card {
             padding: 12px;
             border-radius: 14px;
@@ -1066,7 +681,6 @@ Statistik · {{ club.name }}
             padding: 8px 9px;
         }
 
-
         .statistics-table th,
         .statistics-table td {
             padding: 10px 8px;
@@ -1081,95 +695,53 @@ Statistik · {{ club.name }}
             max-height: 66vh;
         }
 
+        .statistics-table th:nth-child(2),
+        .statistics-table td.player-name {
+            min-width: 105px;
+            width: 105px;
+            max-width: 105px;
+        }
     }
 
-
     @media (max-width: 340px) {
-
-        /*
-         * Only on exceptionally narrow screens do we fall back
-         * to one card per row.
-         */
 
         .highlight-grid {
             grid-template-columns: 1fr;
         }
-
-    }
-
-
-
-
-    @media (max-width: 700px) {
-
-        .table-wrap {
-            max-height: 68vh;
-        }
-
     }
 
 </style>
 
 
-
-
-
 <div class="statistics-page">
 
-
-
     <!-- =================================================
-
          HEADER
-
          ================================================= -->
 
-
-
     <section class="statistics-header">
-
-
 
         <div>
 
             <span class="eyebrow">
-
                 Klubstatistik
-
             </span>
 
-
-
             <h1>
-
                 Statistik
-
             </h1>
 
-
-
             <p>
-
                 {{ club.name }}
-
             </p>
 
         </div>
 
-
-
         <span class="season-pill">
-
             Sæson {{ current_season }}
-
         </span>
 
-
-
     </section>
-
-
-
 
 
     <!-- =================================================
@@ -1370,160 +942,82 @@ Statistik · {{ club.name }}
     </section>
 
 
-
     <!-- =================================================
-
          MAIN CONTENT
-
          ================================================= -->
-
-
 
     <section class="statistics-layout">
 
-
-
-
-
         <!-- =============================================
-
              PLAYER TABLE
-
              ============================================= -->
-
-
 
         <article class="statistics-card">
 
-
-
             <div class="card-heading">
-
-
 
                 <div>
 
                     <h2>
-
                         Spillerrangliste
-
                     </h2>
 
-
-
                     <p class="card-copy">
-
                         Alle aktive klubspillere i sæsonen.
-
                     </p>
 
                 </div>
 
-
-
             </div>
-
-
-
 
 
             <div class="player-tools">
 
-
-
                 <input
-
                     id="playerSearch"
-
                     class="player-search"
-
                     type="search"
-
                     placeholder="Søg efter spiller..."
-
                     autocomplete="off"
-
                 >
-
-
-
-
 
                 <div class="filter-buttons">
 
-
-
                     <button
-
                         type="button"
-
                         class="filter-button active"
-
                         data-gender="all"
-
                     >
-
                         Alle
-
                     </button>
 
-
-
                     <button
-
                         type="button"
-
                         class="filter-button"
-
                         data-gender="M"
-
                     >
-
                         Herrer
-
                     </button>
-
-
 
                     <button
-
                         type="button"
-
                         class="filter-button"
-
                         data-gender="K"
-
                     >
-
                         Damer
-
                     </button>
-
-
 
                 </div>
-
-
 
             </div>
 
 
-
-
-
             <div class="table-wrap">
 
-
-
                 <table
-
                     class="statistics-table"
-
                     id="playerStatisticsTable"
-
                 >
-
-
 
                     <thead>
 
@@ -1543,147 +1037,75 @@ Statistik · {{ club.name }}
 
                             <th>Sejr %</th>
 
-
-
                             <th>
-
                                 3 sæt
-
                                 <span class="stat-help">
-
                                     Antal kampe
-
                                 </span>
-
                             </th>
 
-
-
                             <th>
-
                                 3-sætssejre %
-
                                 <span class="stat-help">
-
                                     Andel af sejre
-
                                 </span>
-
                             </th>
 
-
-
                             <th>
-
                                 Modst. point
-
                                 <span class="stat-help">
-
                                     Gns. ved sejr
-
                                 </span>
-
                             </th>
 
-
-
                             <th>
-
                                 Egne point
-
                                 <span class="stat-help">
-
                                     Gns. ved nederlag
-
                                 </span>
-
                             </th>
 
-
-
                             <th>
-
                                 Hjemme %
-
                                 <span class="stat-help">
-
                                     Sejrsprocent
-
                                 </span>
-
                             </th>
 
-
-
                             <th>
-
                                 Ude %
-
                                 <span class="stat-help">
-
                                     Sejrsprocent
-
                                 </span>
-
                             </th>
 
-
-
                             <th>
-
                                 Sejre ≤8
-
                                 <span class="stat-help">
-
                                     Mindst ét sæt
-
                                 </span>
-
                             </th>
 
-
-
                             <th>
-
                                 Single %
-
                                 <span class="stat-help">
-
                                     HS / DS
-
                                 </span>
-
                             </th>
 
-
-
                             <th>
-
                                 Mix %
-
                                 <span class="stat-help">
-
                                     XD
-
                                 </span>
-
                             </th>
-
-
 
                             <th>
-
                                 HD / DD %
-
                                 <span class="stat-help">
-
                                     Double
-
                                 </span>
-
                             </th>
-
-
 
                             <th>Fantasy-point</th>
 
@@ -1691,542 +1113,257 @@ Statistik · {{ club.name }}
 
                     </thead>
 
-
-
                     <tbody>
-
-
 
                         {% for player in players %}
 
-
-
                             <tr
-
                                 data-gender="{{ player.gender or '' }}"
-
                                 data-player-name="{{ player.player_name|lower }}"
-
                             >
 
-
-
                                 <td class="rank-cell">
-
                                     {{ loop.index }}
-
                                 </td>
-
-
 
                                 <td class="player-name">
 
-                                    {{ player.player_name }}
+                                    <span class="player-name-full">
+                                        {{ player.player_name }}
+                                    </span>
 
-                                </td>
-
-
-
-                                <td>
-
-                                    <span class="gender-tag">
-
-                                        {{ player.gender or "?" }}
-
+                                    <span class="player-name-mobile">
+                                        {{ player.player_name.split(' ')[0] }}
                                     </span>
 
                                 </td>
 
-
+                                <td>
+                                    <span class="gender-tag">
+                                        {{ player.gender or "?" }}
+                                    </span>
+                                </td>
 
                                 <td class="numeric-cell">
-
                                     {{ player.matches_played }}
-
                                 </td>
-
-
 
                                 <td class="numeric-cell">
-
                                     {{ player.wins }}
-
                                 </td>
-
-
 
                                 <td class="numeric-cell muted-cell">
-
                                     {{ player.losses }}
-
                                 </td>
 
-
-
                                 <td class="numeric-cell">
-
                                     {% if player.win_percentage is not none %}
-
-                                        {{ "%.1f"|format(
-
-                                            player.win_percentage
-
-                                        ) }} %
-
+                                        {{ "%.1f"|format(player.win_percentage) }} %
                                     {% else %}
-
                                         –
-
                                     {% endif %}
-
                                 </td>
 
-
-
                                 <td class="numeric-cell">
-
                                     {{ player.three_set_matches }}
-
                                 </td>
 
-
-
                                 <td class="numeric-cell">
-
                                     {% if player.three_set_win_percentage is not none %}
-
-                                        {{ "%.1f"|format(
-
-                                            player.three_set_win_percentage
-
-                                        ) }} %
-
+                                        {{ "%.1f"|format(player.three_set_win_percentage) }} %
                                     {% else %}
-
                                         –
-
                                     {% endif %}
-
                                 </td>
 
-
-
                                 <td class="numeric-cell">
-
                                     {% if player.avg_opponent_points_in_wins is not none %}
-
-                                        {{ "%.1f"|format(
-
-                                            player.avg_opponent_points_in_wins
-
-                                        ) }}
-
+                                        {{ "%.1f"|format(player.avg_opponent_points_in_wins) }}
                                     {% else %}
-
                                         –
-
                                     {% endif %}
-
                                 </td>
 
-
-
                                 <td class="numeric-cell">
-
                                     {% if player.avg_own_points_in_losses is not none %}
-
-                                        {{ "%.1f"|format(
-
-                                            player.avg_own_points_in_losses
-
-                                        ) }}
-
+                                        {{ "%.1f"|format(player.avg_own_points_in_losses) }}
                                     {% else %}
-
                                         –
-
                                     {% endif %}
-
                                 </td>
 
-
-
                                 <td class="numeric-cell">
-
                                     {% if player.home_win_percentage is not none %}
-
-                                        {{ "%.1f"|format(
-
-                                            player.home_win_percentage
-
-                                        ) }} %
-
+                                        {{ "%.1f"|format(player.home_win_percentage) }} %
                                     {% else %}
-
                                         –
-
                                     {% endif %}
-
                                 </td>
 
-
-
                                 <td class="numeric-cell">
-
                                     {% if player.away_win_percentage is not none %}
-
-                                        {{ "%.1f"|format(
-
-                                            player.away_win_percentage
-
-                                        ) }} %
-
+                                        {{ "%.1f"|format(player.away_win_percentage) }} %
                                     {% else %}
-
                                         –
-
                                     {% endif %}
-
                                 </td>
 
-
-
                                 <td class="numeric-cell">
-
                                     {{ player.low8_wins }}
-
                                 </td>
 
-
-
                                 <td class="numeric-cell">
-
                                     {% if player.single_win_percentage is not none %}
-
-                                        {{ "%.1f"|format(
-
-                                            player.single_win_percentage
-
-                                        ) }} %
-
+                                        {{ "%.1f"|format(player.single_win_percentage) }} %
                                     {% else %}
-
                                         –
-
                                     {% endif %}
-
                                 </td>
 
-
-
                                 <td class="numeric-cell">
-
                                     {% if player.mixed_win_percentage is not none %}
-
-                                        {{ "%.1f"|format(
-
-                                            player.mixed_win_percentage
-
-                                        ) }} %
-
+                                        {{ "%.1f"|format(player.mixed_win_percentage) }} %
                                     {% else %}
-
                                         –
-
                                     {% endif %}
-
                                 </td>
-
-
 
                                 <td class="numeric-cell">
-
                                     {% if player.gender_double_win_percentage is not none %}
-
-                                        {{ "%.1f"|format(
-
-                                            player.gender_double_win_percentage
-
-                                        ) }} %
-
+                                        {{ "%.1f"|format(player.gender_double_win_percentage) }} %
                                     {% else %}
-
                                         –
-
                                     {% endif %}
-
                                 </td>
-
-
 
                                 <td class="points-cell numeric-cell">
-
                                     {{ player.fantasy_points }}
-
                                 </td>
 
-
-
                             </tr>
-
-
 
                         {% else %}
 
-
-
                             <tr>
-
                                 <td
-
                                     colspan="18"
-
                                     class="empty-state"
-
                                 >
-
                                     Ingen spillere fundet.
-
                                 </td>
-
                             </tr>
-
-
 
                         {% endfor %}
 
-
-
                     </tbody>
-
-
 
                 </table>
 
-
-
             </div>
-
-
 
         </article>
 
-
-
-
-
     </section>
-
-
 
 </div>
 
 
-
-
-
 <script>
-
-
 
     (() => {
 
-
-
         const searchInput =
-
             document.getElementById("playerSearch");
 
-
-
         const filterButtons =
-
             document.querySelectorAll(
-
                 ".filter-button[data-gender]"
-
             );
-
-
 
         const rows =
-
             document.querySelectorAll(
-
                 "#playerStatisticsTable tbody tr[data-gender]"
-
             );
-
-
-
-
 
         let selectedGender = "all";
 
 
-
-
-
         function applyFilters() {
 
-
-
             const searchValue =
-
                 (searchInput?.value || "")
-
                     .trim()
-
                     .toLowerCase();
-
-
-
-
 
             rows.forEach((row) => {
 
-
-
                 const gender =
-
                     row.dataset.gender || "";
 
-
-
                 const playerName =
-
                     row.dataset.playerName || "";
 
-
-
-
-
                 const matchesGender =
-
                     selectedGender === "all"
-
                     || gender === selectedGender;
 
-
-
-
-
                 const matchesSearch =
-
                     !searchValue
-
                     || playerName.includes(
-
                         searchValue
-
                     );
 
-
-
-
-
                 row.style.display =
-
                     matchesGender
-
                     && matchesSearch
-
                         ? ""
-
                         : "none";
-
-
 
             });
 
-
-
         }
-
-
-
 
 
         filterButtons.forEach((button) => {
 
-
-
             button.addEventListener(
-
                 "click",
-
                 () => {
 
-
-
                     selectedGender =
-
                         button.dataset.gender;
 
-
-
                     filterButtons.forEach(
-
                         (item) => {
-
                             item.classList.remove(
-
                                 "active"
-
                             );
-
                         }
-
                     );
-
-
 
                     button.classList.add(
-
                         "active"
-
                     );
-
-
 
                     applyFilters();
 
                 }
-
             );
-
-
 
         });
 
 
-
-
-
         if (searchInput) {
 
-
-
             searchInput.addEventListener(
-
                 "input",
-
                 applyFilters
-
             );
-
-
 
         }
 
-
-
     })();
 
-
-
 </script>
-
-
 
 {% endblock %}

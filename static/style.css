@@ -2267,7 +2267,11 @@ a {
 
 
     .ghost-button.compact {
-        display: none;
+        display: inline-flex;
+        min-height: 36px;
+        padding: 0 12px;
+        font-size: 11px;
+        flex: 0 0 auto;
     }
 
 

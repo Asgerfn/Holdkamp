@@ -92,7 +92,10 @@ def ensure_gender_column():
 # SCRAPE GENDER
 # =========================================================
 
-def scrape_gender():
+def scrape_gender(
+    club_id,
+    season_id,
+):
 
     print()
     print("=" * 100)
@@ -100,8 +103,8 @@ def scrape_gender():
     print("=" * 100)
 
     women = get_players_for_gender(
-        club_id=CLUB_ID,
-        season_id=SEASON_ID,
+        club_id=club_id,
+        season_id=season_id,
         gender="K",
     )
 
@@ -112,8 +115,8 @@ def scrape_gender():
     print("=" * 100)
 
     men = get_players_for_gender(
-        club_id=CLUB_ID,
-        season_id=SEASON_ID,
+        club_id=club_id,
+        season_id=season_id,
         gender="M",
     )
 
@@ -245,7 +248,10 @@ def save_gender(
 # VALIDATE CLUB
 # =========================================================
 
-def validate():
+def validate(
+    club_id,
+    season_id,
+):
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -275,8 +281,8 @@ def validate():
             ORDER BY
                 p.gender
             """,
-            CLUB_ID,
-            SEASON_ID,
+            club_id,
+            season_id,
         )
 
 
@@ -325,8 +331,8 @@ def validate():
             ORDER BY
                 p.player_name
             """,
-            CLUB_ID,
-            SEASON_ID,
+            club_id,
+            season_id,
         )
 
 
@@ -361,12 +367,22 @@ def validate():
 # MAIN
 # =========================================================
 
-def main():
+def sync_player_genders(
+    club_id,
+    season_id,
+    validate_result=False,
+):
+    """
+    Henter køn for klubbens spillere og gemmer det på
+    dbo.badminton_players. Kan kaldes direkte fra app.py
+    efter sync_club_players().
+    """
 
     ensure_gender_column()
 
-    gender_map = (
-        scrape_gender()
+    gender_map = scrape_gender(
+        club_id=club_id,
+        season_id=season_id,
     )
 
     print()
@@ -375,13 +391,26 @@ def main():
         len(gender_map)
     )
 
-
     save_gender(
         gender_map
     )
 
+    if validate_result:
+        validate(
+            club_id=club_id,
+            season_id=season_id,
+        )
 
-    validate()
+    return gender_map
+
+
+def main():
+
+    sync_player_genders(
+        club_id=CLUB_ID,
+        season_id=SEASON_ID,
+        validate_result=True,
+    )
 
 
 # =========================================================

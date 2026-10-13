@@ -2,6 +2,7 @@ import os
 
 from functools import wraps
 from players_database import sync_club_players
+from player_gender_sync import sync_player_genders
 from threading import Thread
 from flask import (
     Flask,
@@ -124,6 +125,12 @@ def sync_club_players_background(
             club_id=club_id,
             season_id=season_id,
             ranking_list_id=287,
+        )
+
+        # Når spillerlisten er gemt, finder og gemmer vi køn.
+        sync_player_genders(
+            club_id=club_id,
+            season_id=season_id,
         )
 
 
@@ -905,6 +912,11 @@ def refresh_players():
         club_id=current_user.club_id,
         season_id=CURRENT_SEASON,
         ranking_list_id=287,
+    )
+
+    sync_player_genders(
+        club_id=current_user.club_id,
+        season_id=CURRENT_SEASON,
     )
 
     flash(
@@ -5454,7 +5466,7 @@ def statistics():
 
                     SUM(
                         CASE
-                            WHEN pg.match_type = 'XD'
+                            WHEN pg.match_type = 'MD'
                                 THEN 1
                             ELSE 0
                         END
@@ -5463,7 +5475,7 @@ def statistics():
                     SUM(
                         CASE
                             WHEN
-                                pg.match_type = 'XD'
+                                pg.match_type = 'MD'
                                 AND pg.is_win = 1
                             THEN 1
                             ELSE 0
