@@ -44,12 +44,12 @@ POINTS = {
     "SET_WIN_0_5": 4,
     "SET_WIN_6_8": 2,
 
-    "SET_LOSS_0_5": -4,
-    "SET_LOSS_6_8": -2,
+    "SET_LOSS_0_5": -2,
+    "SET_LOSS_6_8": -1,
 
     # Long matches
-    "LONG_MATCH": 2,
-    "SET_REACHES_21": 1,
+    "LONG_MATCH": 1,
+    "SET_REACHES_21": 2,
 
     # Team result
     "TEAM_WIN": 1,
@@ -58,8 +58,16 @@ POINTS = {
     "TEAM_LOSS_0_13": -3,
 
     # Hero bonus
-    "HERO_LOSS_1_12": 4,
-    "HERO_LOSS_2_11": 3,
+    "HERO_LOSS_1_12": 3,
+    "HERO_LOSS_2_11": 5,
+
+    # Scapegoat penalties on big team wins
+    "SCAPEGOAT_WIN_12_1": -2,
+    "SCAPEGOAT_WIN_11_2": -3,
+
+    # 21-0 ("æg")
+    "EGG_ONE_SET": 10,
+    "EGG_TWO_SETS": 20,
 }
 
 
@@ -1006,6 +1014,58 @@ def add_set_points(
 
 
 # =========================================================
+# 21-0 ("ÆG") BONUS
+# =========================================================
+
+def add_egg_bonus(
+    cursor,
+    match,
+    game,
+    own_players,
+    own_side,
+    sets,
+):
+    egg_sets = 0
+
+    for game_set in sets:
+        home_score = game_set["home_score"]
+        away_score = game_set["away_score"]
+
+        if home_score is None or away_score is None:
+            continue
+
+        if own_side == "home":
+            own_score = home_score
+            opponent_score = away_score
+        else:
+            own_score = away_score
+            opponent_score = home_score
+
+        if own_score == 21 and opponent_score == 0:
+            egg_sets += 1
+
+    if egg_sets == 0:
+        return
+
+    if egg_sets >= 2:
+        event_code = "EGG_TWO_SETS"
+        description = "Gav æg i begge vundne sæt"
+    else:
+        event_code = "EGG_ONE_SET"
+        description = "Gav æg i ét sæt"
+
+    for player in own_players:
+        insert_event(
+            cursor=cursor,
+            match=match,
+            player=player,
+            event_code=event_code,
+            description=description,
+            game_id=game["id"],
+        )
+
+
+# =========================================================
 # LONG MATCH
 # =========================================================
 
@@ -1069,7 +1129,7 @@ def add_long_match_bonus(
 
     elif (
         set_count == 3
-        and total_points >= 80
+        and total_points >= 85
     ):
 
         qualifies = True
@@ -1162,6 +1222,54 @@ def add_21_bonus(
 
 
 # =========================================================
+# SINGLE-GAME PLAYER MULTIPLIER
+# =========================================================
+
+def apply_single_game_player_multiplier(
+    cursor,
+    match,
+    player_game_ids,
+):
+    """
+    Hvis en spiller kun deltager i én individuel delkamp
+    i hele holdkampen, fordobles alle point-events fra
+    netop den delkamp.
+
+    Holdbonusser / hero / holdstraffe har game_id = NULL
+    og bliver derfor ikke fordoblet.
+    """
+
+    single_game_players = [
+        badminton_id
+        for badminton_id, game_ids
+        in player_game_ids.items()
+        if len(game_ids) == 1
+    ]
+
+    for badminton_id in single_game_players:
+
+        cursor.execute(
+            """
+            UPDATE dbo.fantasy_point_events
+
+            SET
+                points = points * 2,
+                description = CONCAT(
+                    description,
+                    ' · Dobbelt point: kun én delkamp i holdkampen'
+                )
+
+            WHERE
+                club_match_id = ?
+                AND badminton_id = ?
+                AND game_id IS NOT NULL
+            """,
+            match["id"],
+            badminton_id,
+        )
+
+
+# =========================================================
 # TEAM EVENTS
 # =========================================================
 
@@ -1171,6 +1279,7 @@ def add_team_events(
     own_side,
     all_own_players,
     own_winning_games,
+    own_losing_games,
 ):
 
     parsed_result = (
@@ -1271,6 +1380,64 @@ def add_team_events(
                 description=
                     "Holdet tabte 0-13",
             )
+
+
+    # =====================================================
+    # SCAPEGOAT PENALTY 12-1
+    # =====================================================
+
+    if (
+        own_score == 12
+        and opponent_score == 1
+        and len(own_losing_games) == 1
+    ):
+        only_loss_players = own_losing_games[0]
+
+        for badminton_id in only_loss_players:
+            player = all_own_players.get(badminton_id)
+
+            if player:
+                insert_event(
+                    cursor=cursor,
+                    match=match,
+                    player=player,
+                    event_code="SCAPEGOAT_WIN_12_1",
+                    description=(
+                        "Spilleren var med i holdets eneste "
+                        "nederlag i en 12-1 sejr"
+                    ),
+                )
+
+
+    # =====================================================
+    # SCAPEGOAT PENALTY 11-2
+    # =====================================================
+
+    if (
+        own_score == 11
+        and opponent_score == 2
+        and len(own_losing_games) == 2
+    ):
+        common_players = (
+            own_losing_games[0]
+            &
+            own_losing_games[1]
+        )
+
+        for badminton_id in common_players:
+            player = all_own_players.get(badminton_id)
+
+            if player:
+                insert_event(
+                    cursor=cursor,
+                    match=match,
+                    player=player,
+                    event_code="SCAPEGOAT_WIN_11_2",
+                    description=(
+                        "Spilleren var med i begge holdets "
+                        "nederlag i en 11-2 sejr"
+                    ),
+                )
 
 
     # =====================================================
@@ -1506,6 +1673,12 @@ def recalculate_match_points(
         all_own_players = {}
 
         own_winning_games = []
+        own_losing_games = []
+
+        # Hvilke delkampe hver spiller deltager i.
+        # Bruges til dobbelt individuelle point,
+        # hvis spilleren kun spiller én delkamp.
+        player_game_ids = {}
 
 
         # =================================================
@@ -1565,11 +1738,20 @@ def recalculate_match_points(
 
             for player in own_players:
 
+                badminton_id = player[
+                    "badminton_id"
+                ]
+
                 all_own_players[
-                    player[
-                        "badminton_id"
-                    ]
+                    badminton_id
                 ] = player
+
+                player_game_ids.setdefault(
+                    badminton_id,
+                    set(),
+                ).add(
+                    game["id"]
+                )
 
 
             is_walkover = bool(
@@ -1660,6 +1842,20 @@ def recalculate_match_points(
 
 
             # =============================================
+            # 21-0 ("ÆG") BONUS
+            # =============================================
+
+            add_egg_bonus(
+                cursor=cursor,
+                match=match,
+                game=game,
+                own_players=own_players,
+                own_side=own_side,
+                sets=sets,
+            )
+
+
+            # =============================================
             # LONG MATCH
             # =============================================
 
@@ -1722,18 +1918,32 @@ def recalculate_match_points(
             )
 
 
+            game_player_ids = {
+                player["badminton_id"]
+                for player in own_players
+            }
+
             if winner_side == own_side:
-
                 own_winning_games.append(
-                    {
-                        player[
-                            "badminton_id"
-                        ]
-
-                        for player
-                        in own_players
-                    }
+                    game_player_ids
                 )
+
+            elif winner_side is not None:
+                own_losing_games.append(
+                    game_player_ids
+                )
+
+
+        # =================================================
+        # DOUBLE INDIVIDUAL GAME POINTS FOR PLAYERS
+        # WHO ONLY PLAY ONE GAME IN THE TEAM MATCH
+        # =================================================
+
+        apply_single_game_player_multiplier(
+            cursor=cursor,
+            match=match,
+            player_game_ids=player_game_ids,
+        )
 
 
         # =================================================
@@ -1755,6 +1965,9 @@ def recalculate_match_points(
 
             own_winning_games=
                 own_winning_games,
+
+            own_losing_games=
+                own_losing_games,
         )
 
 

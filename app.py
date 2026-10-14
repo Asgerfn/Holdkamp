@@ -99,6 +99,7 @@ CURRENT_SEASON = 2026
 def sync_club_players_background(
     club_id,
     season_id,
+    department,
 ):
     """
     Henter alle spillere for klubben fra BadmintonPlayer
@@ -130,6 +131,7 @@ def sync_club_players_background(
             club_id=club_id,
             season_id=season_id,
             ranking_list_id=287,
+            department=department,
         )
 
         # Når spillerlisten er gemt, finder og gemmer vi køn.
@@ -162,6 +164,7 @@ def sync_club_players_background(
 def start_club_player_sync(
     club_id,
     season_id,
+    department,
 ):
 
     thread = Thread(
@@ -169,6 +172,7 @@ def start_club_player_sync(
         args=(
             club_id,
             season_id,
+            department,
         ),
         daemon=True,
     )
@@ -948,6 +952,7 @@ def refresh_players():
         club_id=current_user.club_id,
         season_id=CURRENT_SEASON,
         ranking_list_id=287,
+        department=current_user.department,
     )
 
     sync_player_genders(
@@ -1462,6 +1467,7 @@ def register():
             start_club_player_sync(
                 club_id=club_id,
                 season_id=CURRENT_SEASON,
+                department=department,
             )
             flash(
                 f"Velkommen, {display_name}! "
