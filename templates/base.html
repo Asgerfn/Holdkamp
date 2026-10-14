@@ -59,10 +59,6 @@
 
     <style>
 
-        .mobile-logout-link {
-            display: none !important;
-        }
-
         @media (max-width: 820px) {
 
             .header-inner {
@@ -115,13 +111,6 @@
                 justify-content: center !important;
 
                 white-space: nowrap !important;
-            }
-
-            .main-nav .mobile-logout-link {
-                display: inline-flex !important;
-                border: 1px solid rgba(255, 143, 143, 0.22);
-                background: rgba(255, 143, 143, 0.06);
-                color: #ffb3b3;
             }
 
             .header-user {
@@ -259,13 +248,6 @@
                     
 
                     {% endif %}
-
-                    <a
-                        class="mobile-logout-link"
-                        href="{{ url_for('logout') }}"
-                    >
-                        Log ud
-                    </a>
 
                 </nav>
 
