@@ -71,9 +71,17 @@ def player_matches_department(player, department):
 
     if department == "SEN":
         return (
-            ranking_class.startswith("SEN")
-            and not ranking_class.startswith("SEN+50")
-            and not ranking_class.startswith("VET")
+            (
+                ranking_class.startswith("SEN")
+                and not ranking_class.startswith("SEN+50")
+                and not ranking_class.startswith("VET")
+            )
+            or bool(
+                re.match(
+                    r"^U(?:17|19)(?:/U(?:17|19))?",
+                    ranking_class,
+                )
+            )
         )
 
     if department == "U":
@@ -96,9 +104,15 @@ def _department_ranking_sql(department):
 
     if department == "SEN":
         return """
-            UPPER(LTRIM(RTRIM(COALESCE(pr.ranking_class, '')))) LIKE 'SEN%'
-            AND UPPER(LTRIM(RTRIM(COALESCE(pr.ranking_class, '')))) NOT LIKE 'SEN+50%'
-            AND UPPER(LTRIM(RTRIM(COALESCE(pr.ranking_class, '')))) NOT LIKE 'VET%'
+            (
+                (
+                    UPPER(LTRIM(RTRIM(COALESCE(pr.ranking_class, '')))) LIKE 'SEN%'
+                    AND UPPER(LTRIM(RTRIM(COALESCE(pr.ranking_class, '')))) NOT LIKE 'SEN+50%'
+                    AND UPPER(LTRIM(RTRIM(COALESCE(pr.ranking_class, '')))) NOT LIKE 'VET%'
+                )
+                OR UPPER(LTRIM(RTRIM(COALESCE(pr.ranking_class, '')))) LIKE 'U17%'
+                OR UPPER(LTRIM(RTRIM(COALESCE(pr.ranking_class, '')))) LIKE 'U19%'
+            )
         """
 
     if department == "U":
