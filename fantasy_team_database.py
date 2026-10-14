@@ -83,6 +83,11 @@ def ensure_fantasy_team_tables():
                     season_id INT
                         NOT NULL,
 
+                    department NVARCHAR(10)
+                        NOT NULL
+                        CONSTRAINT DF_fantasy_team_rules_department
+                        DEFAULT 'SEN',
+
                     male_players INT
                         NOT NULL
                         CONSTRAINT DF_fantasy_team_rules_male
@@ -128,10 +133,21 @@ def ensure_fantasy_team_tables():
                     ),
 
 
-                    CONSTRAINT UQ_fantasy_team_rules
+                    CONSTRAINT UQ_fantasy_team_rules_department
                     UNIQUE (
                         club_id,
-                        season_id
+                        season_id,
+                        department
+                    ),
+
+                    CONSTRAINT CK_fantasy_team_rules_department
+                    CHECK (
+                        department IN (
+                            'SEN',
+                            'U',
+                            'MOT',
+                            'VET'
+                        )
                     ),
 
 
@@ -208,6 +224,11 @@ def ensure_fantasy_team_tables():
                     season_id INT
                         NOT NULL,
 
+                    department NVARCHAR(10)
+                        NOT NULL
+                        CONSTRAINT DF_fantasy_teams_department
+                        DEFAULT 'SEN',
+
                     team_name NVARCHAR(100)
                         NOT NULL,
 
@@ -248,11 +269,22 @@ def ensure_fantasy_team_tables():
                     ),
 
 
-                    CONSTRAINT UQ_fantasy_teams_user_season
+                    CONSTRAINT UQ_fantasy_teams_user_department_season
                     UNIQUE (
                         user_id,
                         club_id,
-                        season_id
+                        season_id,
+                        department
+                    ),
+
+                    CONSTRAINT CK_fantasy_teams_department
+                    CHECK (
+                        department IN (
+                            'SEN',
+                            'U',
+                            'MOT',
+                            'VET'
+                        )
                     ),
 
 
@@ -663,6 +695,45 @@ def ensure_fantasy_team_tables():
                 ON dbo.fantasy_team_substitutions (
                     fantasy_team_id,
                     effective_at
+                );
+
+            END
+            """
+        )
+
+        conn.commit()
+
+
+        # =================================================
+        # INDEX: TENANT
+        # =================================================
+
+        cursor.execute(
+            """
+            IF NOT EXISTS (
+                SELECT 1
+
+                FROM sys.indexes
+
+                WHERE
+                    name =
+                        'IX_fantasy_teams_tenant'
+
+                    AND object_id =
+                        OBJECT_ID(
+                            'dbo.fantasy_teams'
+                        )
+            )
+            BEGIN
+
+                CREATE INDEX
+                    IX_fantasy_teams_tenant
+
+                ON dbo.fantasy_teams (
+                    club_id,
+                    department,
+                    season_id,
+                    status
                 );
 
             END

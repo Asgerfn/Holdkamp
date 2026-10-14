@@ -1,6 +1,10 @@
 import os
 
+from io import BytesIO
+
 from functools import wraps
+
+import xlsxwriter
 from players_database import sync_club_players
 from player_gender_sync import sync_player_genders
 from threading import Thread
@@ -13,6 +17,7 @@ from flask import (
     flash,
     jsonify,
     abort,
+    send_file,
 )
 
 from active_team_sync import (
@@ -197,6 +202,7 @@ class User(UserMixin):
         display_name,
         club_id,
         club_role,
+        department,
     ):
 
         self.id = str(user_id)
@@ -208,6 +214,8 @@ class User(UserMixin):
         self.club_id = club_id
 
         self.club_role = club_role
+
+        self.department = department
 
 
     @property
@@ -235,7 +243,8 @@ def get_user_by_id(user_id):
                 email,
                 display_name,
                 club_id,
-                club_role
+                club_role,
+                department
 
             FROM dbo.users
 
@@ -265,6 +274,8 @@ def get_user_by_id(user_id):
             club_id=row.club_id,
 
             club_role=row.club_role,
+
+            department=row.department,
         )
 
 
@@ -718,6 +729,7 @@ def players():
 
                 WHERE
                     badminton_id IS NOT NULL
+                    AND department = ?
 
                 GROUP BY
                     badminton_id,
@@ -744,6 +756,27 @@ def players():
 
                 AND cp.is_active = 1
 
+                AND (
+                    EXISTS (
+                        SELECT 1
+                        FROM dbo.v_department_players dp
+                        WHERE
+                            dp.club_id = cp.club_id
+                            AND dp.season_id = cp.season_id
+                            AND dp.department = ?
+                            AND dp.badminton_id =
+                                cp.badminton_id
+                    )
+                    OR NOT EXISTS (
+                        SELECT 1
+                        FROM dbo.v_department_players dp
+                        WHERE
+                            dp.club_id = cp.club_id
+                            AND dp.season_id = cp.season_id
+                            AND dp.department = ?
+                    )
+                )
+
 
             ORDER BY
 
@@ -761,8 +794,11 @@ def players():
                 p.player_name ASC
             """,
 
+            current_user.department,
             current_user.club_id,
-            CURRENT_SEASON
+            CURRENT_SEASON,
+            current_user.department,
+            current_user.department
         )
 
         player_rows = cursor.fetchall()
@@ -984,7 +1020,8 @@ def login():
                     password_hash,
                     display_name,
                     club_id,
-                    club_role
+                    club_role,
+                    department
 
                 FROM dbo.users
 
@@ -1034,6 +1071,8 @@ def login():
             club_id=row.club_id,
 
             club_role=row.club_role,
+
+            department=row.department,
         )
 
 
@@ -1106,6 +1145,14 @@ def register():
         )
 
 
+        department = (
+            request.form
+            .get("department", "")
+            .strip()
+            .upper()
+        )
+
+
         # =================================================
         # VALIDATION
         # =================================================
@@ -1150,6 +1197,26 @@ def register():
 
             flash(
                 "De to passwords er ikke ens.",
+                "error"
+            )
+
+            return render_template(
+                "register.html"
+            )
+
+
+        valid_departments = {
+            "SEN",
+            "U",
+            "MOT",
+            "VET",
+        }
+
+
+        if department not in valid_departments:
+
+            flash(
+                "Vælg en gyldig afdeling.",
                 "error"
             )
 
@@ -1270,10 +1337,13 @@ def register():
                 FROM dbo.users
                     WITH (UPDLOCK, HOLDLOCK)
 
-                WHERE club_id = ?
+                WHERE
+                    club_id = ?
+                    AND department = ?
                 """,
 
-                club_id
+                club_id,
+                department
             )
 
 
@@ -1314,7 +1384,8 @@ def register():
                     password_hash,
                     display_name,
                     club_id,
-                    club_role
+                    club_role,
+                    department
 
                 )
 
@@ -1322,6 +1393,7 @@ def register():
                     INSERTED.user_id
 
                 VALUES (
+                    ?,
                     ?,
                     ?,
                     ?,
@@ -1334,7 +1406,8 @@ def register():
                 password_hash,
                 display_name,
                 club_id,
-                club_role
+                club_role,
+                department
             )
 
 
@@ -1374,6 +1447,8 @@ def register():
             club_id=club_id,
 
             club_role=club_role,
+
+            department=department,
         )
 
 
@@ -1390,7 +1465,7 @@ def register():
             )
             flash(
                 f"Velkommen, {display_name}! "
-                "Du er den første bruger i klubben "
+                "Du er den første bruger i denne klub og afdeling "
                 "og er derfor blevet administrator.",
                 "success"
             )
@@ -1471,9 +1546,11 @@ def admin_team_builder():
             WHERE
                 club_id = ?
                 AND season_id = ?
+                AND department = ?
             """,
             current_user.club_id,
             CURRENT_SEASON,
+            current_user.department,
         )
 
         previous_rules_row = (
@@ -1603,7 +1680,8 @@ def admin_team_builder():
                 USING (
                     SELECT
                         ? AS club_id,
-                        ? AS season_id
+                        ? AS season_id,
+                        ? AS department
                 ) AS source
 
                 ON
@@ -1612,6 +1690,9 @@ def admin_team_builder():
 
                     AND target.season_id =
                         source.season_id
+
+                    AND target.department =
+                        source.department
 
 
                 WHEN MATCHED THEN
@@ -1636,6 +1717,7 @@ def admin_team_builder():
                     INSERT (
                         club_id,
                         season_id,
+                        department,
 
                         male_players,
                         female_players,
@@ -1648,6 +1730,7 @@ def admin_team_builder():
                     VALUES (
                         source.club_id,
                         source.season_id,
+                        source.department,
 
                         ?,
                         ?,
@@ -1660,6 +1743,7 @@ def admin_team_builder():
 
                 current_user.club_id,
                 CURRENT_SEASON,
+                current_user.department,
 
                 male_players,
                 female_players,
@@ -1709,6 +1793,8 @@ def admin_team_builder():
                             current_user.club_id,
                         season_id=
                             CURRENT_SEASON,
+                        department=
+                            current_user.department,
                         male_required=
                             male_players,
                         female_required=
@@ -1773,10 +1859,12 @@ def admin_team_builder():
             WHERE
                 club_id = ?
                 AND season_id = ?
+                AND department = ?
             """,
 
             current_user.club_id,
-            CURRENT_SEASON
+            CURRENT_SEASON,
+            current_user.department
         )
 
         rules_row = cursor.fetchone()
@@ -2020,11 +2108,15 @@ def my_team():
 
                 AND season_id = ?
 
+                AND department = ?
+
             """,
 
             current_user.club_id,
 
-            CURRENT_SEASON
+            CURRENT_SEASON,
+
+            current_user.department
 
         )
 
@@ -2272,6 +2364,8 @@ def my_team():
 
                     badminton_id IS NOT NULL
 
+                    AND department = ?
+
 
 
                 GROUP BY
@@ -2315,6 +2409,27 @@ def my_team():
 
 
                 AND cp.is_active = 1
+
+                AND (
+                    EXISTS (
+                        SELECT 1
+                        FROM dbo.v_department_players dp
+                        WHERE
+                            dp.club_id = cp.club_id
+                            AND dp.season_id = cp.season_id
+                            AND dp.department = ?
+                            AND dp.badminton_id =
+                                cp.badminton_id
+                    )
+                    OR NOT EXISTS (
+                        SELECT 1
+                        FROM dbo.v_department_players dp
+                        WHERE
+                            dp.club_id = cp.club_id
+                            AND dp.season_id = cp.season_id
+                            AND dp.department = ?
+                    )
+                )
 
 
 
@@ -2366,9 +2481,15 @@ def my_team():
 
             """,
 
+            current_user.department,
+
             current_user.club_id,
 
-            CURRENT_SEASON
+            CURRENT_SEASON,
+
+            current_user.department,
+
+            current_user.department
 
         )
 
@@ -2510,6 +2631,8 @@ def my_team():
 
                 AND season_id = ?
 
+                AND department = ?
+
             """,
 
             int(
@@ -2524,7 +2647,9 @@ def my_team():
 
 
 
-            CURRENT_SEASON
+            CURRENT_SEASON,
+
+            current_user.department
 
         )
 
@@ -2622,6 +2747,8 @@ def my_team():
                         current_user.club_id,
                     season_id=
                         CURRENT_SEASON,
+                    department=
+                        current_user.department,
                     as_of=
                         adjustment_now,
                     infer_null_deadline=
@@ -4023,6 +4150,8 @@ def my_team():
 
                         season_id,
 
+                        department,
+
                         team_name,
 
                         status
@@ -4036,6 +4165,8 @@ def my_team():
 
 
                     VALUES (
+
+                        ?,
 
                         ?,
 
@@ -4064,6 +4195,10 @@ def my_team():
 
 
                     CURRENT_SEASON,
+
+
+
+                    current_user.department,
 
 
 
@@ -4549,6 +4684,8 @@ def my_team():
 
                         badminton_id IS NOT NULL
 
+                        AND department = ?
+
 
 
                     GROUP BY
@@ -4622,6 +4759,8 @@ def my_team():
                 CURRENT_SEASON,
 
 
+
+                current_user.department,
 
                 current_user.club_id,
 
@@ -4989,157 +5128,33 @@ def search_clubs():
         cursor.close()
         conn.close()
         
-@app.route("/statistics")
-@login_required
-def statistics():
 
-    ensure_captain_change_table()
+
+# =========================================================
+# STATISTICS - XLSX EXPORT
+# =========================================================
+@app.route("/statistics/download.xlsx")
+@login_required
+def download_statistics_xlsx():
 
     conn = get_connection()
     cursor = conn.cursor()
 
     try:
 
-        # =================================================
-        # CLUB
-        # =================================================
-
         cursor.execute(
             """
-            SELECT
-                club_id,
-                club_name
-
+            SELECT club_name
             FROM dbo.badminton_clubs
-
             WHERE club_id = ?
             """,
-            current_user.club_id
+            current_user.club_id,
         )
 
         club_row = cursor.fetchone()
 
         if club_row is None:
             abort(404)
-
-
-
-        # =================================================
-        # SUMMARY KPI'S
-        # =================================================
-
-        cursor.execute(
-            """
-            SELECT
-
-                (
-                    SELECT COUNT(*)
-
-                    FROM dbo.club_players cp
-
-                    WHERE
-                        cp.club_id = ?
-                        AND cp.season_id = ?
-                        AND cp.is_active = 1
-                ) AS active_players,
-
-
-                (
-                    SELECT COUNT(*)
-
-                    FROM dbo.club_matches cm
-
-                    WHERE
-                        cm.club_id = ?
-                        AND cm.season_id = ?
-                        AND cm.result IS NOT NULL
-                        AND LTRIM(RTRIM(cm.result)) <> ''
-                ) AS played_team_matches,
-
-
-                (
-                    SELECT COUNT(*)
-
-                    FROM dbo.club_match_games g
-
-                    INNER JOIN dbo.club_matches cm
-                        ON cm.id = g.club_match_id
-
-                    WHERE
-                        cm.club_id = ?
-                        AND cm.season_id = ?
-                        AND (
-                            g.winner_side IN ('home', 'away')
-                            OR g.winner_wo_raw LIKE '%(1)%'
-                            OR g.winner_wo_raw LIKE '%(2)%'
-                        )
-                ) AS individual_games,
-
-
-                (
-                    SELECT COUNT(*)
-
-                    FROM dbo.fantasy_teams ft
-
-                    WHERE
-                        ft.club_id = ?
-                        AND ft.season_id = ?
-                        AND ft.status = 'active'
-                ) AS active_fantasy_teams,
-
-
-                (
-                    SELECT COALESCE(SUM(fpe.points), 0)
-
-                    FROM dbo.fantasy_point_events fpe
-
-                    WHERE
-                        fpe.club_id = ?
-                        AND fpe.season_id = ?
-                ) AS total_fantasy_points
-            """,
-
-            current_user.club_id,
-            CURRENT_SEASON,
-
-            current_user.club_id,
-            CURRENT_SEASON,
-
-            current_user.club_id,
-            CURRENT_SEASON,
-
-            current_user.club_id,
-            CURRENT_SEASON,
-
-            current_user.club_id,
-            CURRENT_SEASON,
-        )
-
-        summary_row = cursor.fetchone()
-
-
-        # =================================================
-        # PLAYER STATISTICS
-        # =================================================
-        #
-        # Statistik beregnes direkte på kamp- og sætniveau:
-        #
-        # - kampe / sejre / nederlag / sejr %
-        # - antal 3-sætskampe
-        # - andel af sejre som gik i 3 sæt
-        # - gennemsnitlige modstanderpoint i sejre
-        # - gennemsnitlige egne point i nederlag
-        # - hjemme- og udebanesejr %
-        # - sejre med mindst ét vundet sæt, hvor
-        #   modstanderen fik 8 point eller færre
-        # - single sejr % (HS / DS)
-        # - mix sejr % (XD)
-        # - HD/DD sejr % (HD / DD)
-        #
-        # W.O. tæller med i sejr/nederlag og winrates,
-        # men ikke i scorebaserede gennemsnit, hvis der
-        # ikke findes sætscorer.
-        # =================================================
 
         cursor.execute(
             """
@@ -5154,6 +5169,7 @@ def statistics():
                 WHERE
                     fpe.club_id = ?
                     AND fpe.season_id = ?
+                    AND fpe.department = ?
                     AND fpe.badminton_id IS NOT NULL
 
                 GROUP BY
@@ -5258,12 +5274,19 @@ def statistics():
                 INNER JOIN dbo.club_matches cm
                     ON cm.id = g.club_match_id
 
+                INNER JOIN dbo.club_dashboard_teams cdt
+                    ON cdt.club_id = cm.club_id
+                    AND cdt.season_id = cm.season_id
+                    AND cdt.league_group_id = cm.league_group_id
+                    AND cdt.team_name = cm.club_team_name
+
                 LEFT JOIN SetStats ss
                     ON ss.game_id = g.id
 
                 WHERE
                     cm.club_id = ?
                     AND cm.season_id = ?
+                    AND cdt.department = ?
             ),
 
             PlayerGames AS (
@@ -5568,7 +5591,23 @@ def statistics():
                 CASE
                     WHEN
                         COALESCE(
-                            gs.wins,
+                            gs.matches_played,
+                            0
+                        ) = 0
+                    THEN NULL
+
+                    ELSE CAST(
+                        100.0
+                        * gs.three_set_matches
+                        / gs.matches_played
+                        AS DECIMAL(5,1)
+                    )
+                END AS three_set_match_percentage,
+
+                CASE
+                    WHEN
+                        COALESCE(
+                            gs.three_set_matches,
                             0
                         ) = 0
                     THEN NULL
@@ -5576,7 +5615,7 @@ def statistics():
                     ELSE CAST(
                         100.0
                         * gs.three_set_wins
-                        / gs.wins
+                        / gs.three_set_matches
                         AS DECIMAL(5,1)
                     )
                 END AS three_set_win_percentage,
@@ -5694,6 +5733,10 @@ def statistics():
                 cp.club_id = ?
                 AND cp.season_id = ?
                 AND cp.is_active = 1
+                AND (
+                    gs.badminton_id IS NOT NULL
+                    OR pp.badminton_id IS NOT NULL
+                )
 
             ORDER BY
                 COALESCE(
@@ -5709,9 +5752,1038 @@ def statistics():
 
             current_user.club_id,
             CURRENT_SEASON,
+            current_user.department,
 
             current_user.club_id,
             CURRENT_SEASON,
+            current_user.department,
+
+            current_user.club_id,
+            CURRENT_SEASON,
+        )
+
+        player_rows = cursor.fetchall()
+
+    finally:
+
+        cursor.close()
+        conn.close()
+
+
+    department_names = {
+        "SEN": "Senior",
+        "U": "Ungdom",
+        "MOT": "Motionist",
+        "VET": "Veteran",
+    }
+
+    department_name = department_names.get(
+        current_user.department,
+        current_user.department,
+    )
+
+    output = BytesIO()
+
+    workbook = xlsxwriter.Workbook(
+        output,
+        {"in_memory": True},
+    )
+
+    worksheet = workbook.add_worksheet("Spillerstatistik")
+
+    header_format = workbook.add_format({
+        "bold": True,
+        "bg_color": "#0B1625",
+        "font_color": "#FFFFFF",
+        "border": 1,
+        "border_color": "#24364D",
+        "align": "center",
+        "valign": "vcenter",
+    })
+
+    text_format = workbook.add_format({
+        "valign": "vcenter",
+    })
+
+    integer_format = workbook.add_format({
+        "num_format": "0",
+        "align": "right",
+    })
+
+    decimal_format = workbook.add_format({
+        "num_format": "0.0",
+        "align": "right",
+    })
+
+    percentage_format = workbook.add_format({
+        "num_format": "0.0%",
+        "align": "right",
+    })
+
+    headers = [
+        "#",
+        "Spiller",
+        "Køn",
+        "Kampe",
+        "V",
+        "T",
+        "Sejr %",
+        "3 sæt",
+        "3 sæt %",
+        "3-sæts sejr %",
+        "Modst. point (gns. ved sejr)",
+        "Egne point (gns. ved nederlag)",
+        "Hjemme %",
+        "Ude %",
+        "Sejre ≤8",
+        "Single %",
+        "Mix %",
+        "HD / DD %",
+        "Fantasy-point",
+    ]
+
+    worksheet.write_row(
+        0,
+        0,
+        headers,
+        header_format,
+    )
+
+    percentage_fields = {
+        "win_percentage",
+        "three_set_match_percentage",
+        "three_set_win_percentage",
+        "home_win_percentage",
+        "away_win_percentage",
+        "single_win_percentage",
+        "mixed_win_percentage",
+        "gender_double_win_percentage",
+    }
+
+    for index, row in enumerate(player_rows, start=1):
+
+        excel_row = index
+
+        values = [
+            index,
+            row.player_name,
+            row.gender or "",
+            int(row.matches_played or 0),
+            int(row.wins or 0),
+            int(row.losses or 0),
+            row.win_percentage,
+            int(row.three_set_matches or 0),
+            row.three_set_match_percentage,
+            row.three_set_win_percentage,
+            row.avg_opponent_points_in_wins,
+            row.avg_own_points_in_losses,
+            row.home_win_percentage,
+            row.away_win_percentage,
+            int(row.low8_wins or 0),
+            row.single_win_percentage,
+            row.mixed_win_percentage,
+            row.gender_double_win_percentage,
+            int(row.fantasy_points or 0),
+        ]
+
+        formats = [
+            integer_format,
+            text_format,
+            text_format,
+            integer_format,
+            integer_format,
+            integer_format,
+            percentage_format,
+            integer_format,
+            percentage_format,
+            percentage_format,
+            decimal_format,
+            decimal_format,
+            percentage_format,
+            percentage_format,
+            integer_format,
+            percentage_format,
+            percentage_format,
+            percentage_format,
+            integer_format,
+        ]
+
+        for column_index, (value, cell_format) in enumerate(
+            zip(values, formats)
+        ):
+
+            if column_index in {6, 8, 9, 12, 13, 15, 16, 17}:
+                if value is None:
+                    worksheet.write_blank(
+                        excel_row,
+                        column_index,
+                        None,
+                        cell_format,
+                    )
+                else:
+                    worksheet.write_number(
+                        excel_row,
+                        column_index,
+                        float(value) / 100.0,
+                        cell_format,
+                    )
+
+            elif column_index in {10, 11}:
+                if value is None:
+                    worksheet.write_blank(
+                        excel_row,
+                        column_index,
+                        None,
+                        cell_format,
+                    )
+                else:
+                    worksheet.write_number(
+                        excel_row,
+                        column_index,
+                        float(value),
+                        cell_format,
+                    )
+
+            elif isinstance(value, int):
+                worksheet.write_number(
+                    excel_row,
+                    column_index,
+                    value,
+                    cell_format,
+                )
+
+            else:
+                worksheet.write(
+                    excel_row,
+                    column_index,
+                    value,
+                    cell_format,
+                )
+
+    worksheet.freeze_panes(1, 2)
+    worksheet.autofilter(
+        0,
+        0,
+        max(len(player_rows), 1),
+        len(headers) - 1,
+    )
+
+    worksheet.set_column("A:A", 6)
+    worksheet.set_column("B:B", 28)
+    worksheet.set_column("C:C", 8)
+    worksheet.set_column("D:F", 9)
+    worksheet.set_column("G:J", 14)
+    worksheet.set_column("K:L", 25)
+    worksheet.set_column("M:N", 12)
+    worksheet.set_column("O:O", 11)
+    worksheet.set_column("P:R", 12)
+    worksheet.set_column("S:S", 14)
+    worksheet.set_row(0, 30)
+
+    workbook.close()
+    output.seek(0)
+
+    safe_club_name = "".join(
+        character if character.isalnum() else "_"
+        for character in club_row.club_name
+    ).strip("_")
+
+    safe_department = "".join(
+        character if character.isalnum() else "_"
+        for character in department_name
+    ).strip("_")
+
+    filename = (
+        f"{safe_club_name}_"
+        f"{safe_department}_"
+        f"statistik_{CURRENT_SEASON}.xlsx"
+    )
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype=(
+            "application/vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        ),
+    )
+
+@app.route("/statistics")
+@login_required
+def statistics():
+
+    ensure_captain_change_table()
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+
+        # =================================================
+        # CLUB
+        # =================================================
+
+        cursor.execute(
+            """
+            SELECT
+                club_id,
+                club_name
+
+            FROM dbo.badminton_clubs
+
+            WHERE club_id = ?
+            """,
+            current_user.club_id
+        )
+
+        club_row = cursor.fetchone()
+
+        if club_row is None:
+            abort(404)
+
+
+
+        # =================================================
+        # SUMMARY KPI'S
+        # =================================================
+
+        cursor.execute(
+            """
+            SELECT
+
+                (
+                    SELECT COUNT(*)
+
+                    FROM dbo.v_department_players dp
+
+                    WHERE
+                        dp.club_id = ?
+                        AND dp.season_id = ?
+                        AND dp.department = ?
+                ) AS active_players,
+
+
+                (
+                    SELECT COUNT(*)
+
+                    FROM dbo.club_matches cm
+
+                    INNER JOIN dbo.club_dashboard_teams cdt
+                        ON cdt.club_id = cm.club_id
+                        AND cdt.season_id = cm.season_id
+                        AND cdt.league_group_id = cm.league_group_id
+                        AND cdt.team_name = cm.club_team_name
+
+                    WHERE
+                        cm.club_id = ?
+                        AND cm.season_id = ?
+                        AND cdt.department = ?
+                        AND cm.result IS NOT NULL
+                        AND LTRIM(RTRIM(cm.result)) <> ''
+                ) AS played_team_matches,
+
+
+                (
+                    SELECT COUNT(*)
+
+                    FROM dbo.club_match_games g
+
+                    INNER JOIN dbo.club_matches cm
+                        ON cm.id = g.club_match_id
+
+                    INNER JOIN dbo.club_dashboard_teams cdt
+                        ON cdt.club_id = cm.club_id
+                        AND cdt.season_id = cm.season_id
+                        AND cdt.league_group_id = cm.league_group_id
+                        AND cdt.team_name = cm.club_team_name
+
+                    WHERE
+                        cm.club_id = ?
+                        AND cm.season_id = ?
+                        AND cdt.department = ?
+                        AND (
+                            g.winner_side IN ('home', 'away')
+                            OR g.winner_wo_raw LIKE '%(1)%'
+                            OR g.winner_wo_raw LIKE '%(2)%'
+                        )
+                ) AS individual_games,
+
+
+                (
+                    SELECT COUNT(*)
+
+                    FROM dbo.fantasy_teams ft
+
+                    WHERE
+                        ft.club_id = ?
+                        AND ft.season_id = ?
+                        AND ft.department = ?
+                        AND ft.status = 'active'
+                ) AS active_fantasy_teams,
+
+
+                (
+                    SELECT COALESCE(SUM(fpe.points), 0)
+
+                    FROM dbo.fantasy_point_events fpe
+
+                    WHERE
+                        fpe.club_id = ?
+                        AND fpe.season_id = ?
+                        AND fpe.department = ?
+                ) AS total_fantasy_points
+            """,
+
+            current_user.club_id,
+            CURRENT_SEASON,
+            current_user.department,
+
+            current_user.club_id,
+            CURRENT_SEASON,
+            current_user.department,
+
+            current_user.club_id,
+            CURRENT_SEASON,
+            current_user.department,
+
+            current_user.club_id,
+            CURRENT_SEASON,
+            current_user.department,
+
+            current_user.club_id,
+            CURRENT_SEASON,
+            current_user.department,
+        )
+
+        summary_row = cursor.fetchone()
+
+
+        # =================================================
+        # PLAYER STATISTICS
+        # =================================================
+        #
+        # Statistik beregnes direkte på kamp- og sætniveau:
+        #
+        # - kampe / sejre / nederlag / sejr %
+        # - antal 3-sætskampe
+        # - andel af alle kampe som går i 3 sæt
+        # - sejrsprocent i de kampe som går i 3 sæt
+        # - gennemsnitlige modstanderpoint i sejre
+        # - gennemsnitlige egne point i nederlag
+        # - hjemme- og udebanesejr %
+        # - sejre med mindst ét vundet sæt, hvor
+        #   modstanderen fik 8 point eller færre
+        # - single sejr % (HS / DS)
+        # - mix sejr % (XD)
+        # - HD/DD sejr % (HD / DD)
+        #
+        # W.O. tæller med i sejr/nederlag og winrates,
+        # men ikke i scorebaserede gennemsnit, hvis der
+        # ikke findes sætscorer.
+        # =================================================
+
+        cursor.execute(
+            """
+            WITH PlayerPoints AS (
+
+                SELECT
+                    fpe.badminton_id,
+                    SUM(fpe.points) AS fantasy_points
+
+                FROM dbo.fantasy_point_events fpe
+
+                WHERE
+                    fpe.club_id = ?
+                    AND fpe.season_id = ?
+                    AND fpe.department = ?
+                    AND fpe.badminton_id IS NOT NULL
+
+                GROUP BY
+                    fpe.badminton_id
+            ),
+
+            SetStats AS (
+
+                SELECT
+                    s.game_id,
+
+                    COUNT(
+                        CASE
+                            WHEN
+                                s.home_score IS NOT NULL
+                                AND s.away_score IS NOT NULL
+                            THEN 1
+                        END
+                    ) AS set_count,
+
+                    SUM(
+                        CASE
+                            WHEN
+                                s.home_score IS NOT NULL
+                                AND s.away_score IS NOT NULL
+                            THEN s.home_score
+                        END
+                    ) AS home_points,
+
+                    SUM(
+                        CASE
+                            WHEN
+                                s.home_score IS NOT NULL
+                                AND s.away_score IS NOT NULL
+                            THEN s.away_score
+                        END
+                    ) AS away_points,
+
+                    MAX(
+                        CASE
+                            WHEN
+                                s.home_score > s.away_score
+                                AND s.away_score <= 8
+                            THEN 1
+                            ELSE 0
+                        END
+                    ) AS home_low8_set_win,
+
+                    MAX(
+                        CASE
+                            WHEN
+                                s.away_score > s.home_score
+                                AND s.home_score <= 8
+                            THEN 1
+                            ELSE 0
+                        END
+                    ) AS away_low8_set_win
+
+                FROM dbo.club_match_game_sets s
+
+                GROUP BY
+                    s.game_id
+            ),
+
+            GameInfo AS (
+
+                SELECT
+                    g.id AS game_id,
+                    g.match_type,
+
+                    CASE
+                        WHEN g.winner_side IN ('home', 'away')
+                            THEN g.winner_side
+
+                        WHEN g.winner_wo_raw LIKE '%(1)%'
+                            THEN 'home'
+
+                        WHEN g.winner_wo_raw LIKE '%(2)%'
+                            THEN 'away'
+
+                        ELSE NULL
+                    END AS effective_winner,
+
+                    COALESCE(ss.set_count, 0)
+                        AS set_count,
+
+                    ss.home_points,
+                    ss.away_points,
+
+                    COALESCE(
+                        ss.home_low8_set_win,
+                        0
+                    ) AS home_low8_set_win,
+
+                    COALESCE(
+                        ss.away_low8_set_win,
+                        0
+                    ) AS away_low8_set_win
+
+                FROM dbo.club_match_games g
+
+                INNER JOIN dbo.club_matches cm
+                    ON cm.id = g.club_match_id
+
+                INNER JOIN dbo.club_dashboard_teams cdt
+                    ON cdt.club_id = cm.club_id
+                    AND cdt.season_id = cm.season_id
+                    AND cdt.league_group_id = cm.league_group_id
+                    AND cdt.team_name = cm.club_team_name
+
+                LEFT JOIN SetStats ss
+                    ON ss.game_id = g.id
+
+                WHERE
+                    cm.club_id = ?
+                    AND cm.season_id = ?
+                    AND cdt.department = ?
+            ),
+
+            PlayerGames AS (
+
+                SELECT
+                    gp.badminton_id,
+                    gi.game_id,
+                    gi.match_type,
+                    gp.side,
+                    gi.set_count,
+
+                    CASE
+                        WHEN gi.effective_winner = gp.side
+                            THEN 1
+                        ELSE 0
+                    END AS is_win,
+
+                    CASE
+                        WHEN gp.side = 'home'
+                            THEN gi.home_points
+                        ELSE gi.away_points
+                    END AS own_points,
+
+                    CASE
+                        WHEN gp.side = 'home'
+                            THEN gi.away_points
+                        ELSE gi.home_points
+                    END AS opponent_points,
+
+                    CASE
+                        WHEN
+                            gi.effective_winner = gp.side
+                            AND gp.side = 'home'
+                            AND gi.home_low8_set_win = 1
+                        THEN 1
+
+                        WHEN
+                            gi.effective_winner = gp.side
+                            AND gp.side = 'away'
+                            AND gi.away_low8_set_win = 1
+                        THEN 1
+
+                        ELSE 0
+                    END AS low8_win
+
+                FROM dbo.club_match_game_players gp
+
+                INNER JOIN GameInfo gi
+                    ON gi.game_id = gp.game_id
+
+                WHERE
+                    gp.badminton_id IS NOT NULL
+                    AND gi.effective_winner IS NOT NULL
+            ),
+
+            GameStats AS (
+
+                SELECT
+                    pg.badminton_id,
+
+                    COUNT(*) AS matches_played,
+
+                    SUM(pg.is_win) AS wins,
+
+                    SUM(
+                        CASE
+                            WHEN pg.set_count = 3
+                                THEN 1
+                            ELSE 0
+                        END
+                    ) AS three_set_matches,
+
+                    SUM(
+                        CASE
+                            WHEN
+                                pg.is_win = 1
+                                AND pg.set_count = 3
+                            THEN 1
+                            ELSE 0
+                        END
+                    ) AS three_set_wins,
+
+                    CAST(
+                        SUM(
+                            CASE
+                                WHEN
+                                    pg.is_win = 1
+                                    AND pg.opponent_points IS NOT NULL
+                                    AND pg.set_count > 0
+                                THEN pg.opponent_points
+                                ELSE 0
+                            END
+                        )
+                        AS DECIMAL(12,2)
+                    )
+                    /
+                    NULLIF(
+                        SUM(
+                            CASE
+                                WHEN
+                                    pg.is_win = 1
+                                    AND pg.opponent_points IS NOT NULL
+                                    AND pg.set_count > 0
+                                THEN pg.set_count
+                                ELSE 0
+                            END
+                        ),
+                        0
+                    ) AS avg_opponent_points_in_wins,
+
+                    CAST(
+                        SUM(
+                            CASE
+                                WHEN
+                                    pg.is_win = 0
+                                    AND pg.own_points IS NOT NULL
+                                    AND pg.set_count > 0
+                                THEN pg.own_points
+                                ELSE 0
+                            END
+                        )
+                        AS DECIMAL(12,2)
+                    )
+                    /
+                    NULLIF(
+                        SUM(
+                            CASE
+                                WHEN
+                                    pg.is_win = 0
+                                    AND pg.own_points IS NOT NULL
+                                    AND pg.set_count > 0
+                                THEN pg.set_count
+                                ELSE 0
+                            END
+                        ),
+                        0
+                    ) AS avg_own_points_in_losses,
+                    SUM(
+                        CASE
+                            WHEN pg.side = 'home'
+                                THEN 1
+                            ELSE 0
+                        END
+                    ) AS home_matches,
+
+                    SUM(
+                        CASE
+                            WHEN
+                                pg.side = 'home'
+                                AND pg.is_win = 1
+                            THEN 1
+                            ELSE 0
+                        END
+                    ) AS home_wins,
+
+                    SUM(
+                        CASE
+                            WHEN pg.side = 'away'
+                                THEN 1
+                            ELSE 0
+                        END
+                    ) AS away_matches,
+
+                    SUM(
+                        CASE
+                            WHEN
+                                pg.side = 'away'
+                                AND pg.is_win = 1
+                            THEN 1
+                            ELSE 0
+                        END
+                    ) AS away_wins,
+
+                    SUM(pg.low8_win)
+                        AS low8_wins,
+
+                    SUM(
+                        CASE
+                            WHEN pg.match_type IN (
+                                'HS',
+                                'DS'
+                            )
+                            THEN 1
+                            ELSE 0
+                        END
+                    ) AS single_matches,
+
+                    SUM(
+                        CASE
+                            WHEN
+                                pg.match_type IN (
+                                    'HS',
+                                    'DS'
+                                )
+                                AND pg.is_win = 1
+                            THEN 1
+                            ELSE 0
+                        END
+                    ) AS single_wins,
+
+                    SUM(
+                        CASE
+                            WHEN pg.match_type = 'MD'
+                                THEN 1
+                            ELSE 0
+                        END
+                    ) AS mixed_matches,
+
+                    SUM(
+                        CASE
+                            WHEN
+                                pg.match_type = 'MD'
+                                AND pg.is_win = 1
+                            THEN 1
+                            ELSE 0
+                        END
+                    ) AS mixed_wins,
+
+                    SUM(
+                        CASE
+                            WHEN pg.match_type IN (
+                                'HD',
+                                'DD'
+                            )
+                            THEN 1
+                            ELSE 0
+                        END
+                    ) AS gender_double_matches,
+
+                    SUM(
+                        CASE
+                            WHEN
+                                pg.match_type IN (
+                                    'HD',
+                                    'DD'
+                                )
+                                AND pg.is_win = 1
+                            THEN 1
+                            ELSE 0
+                        END
+                    ) AS gender_double_wins
+
+                FROM PlayerGames pg
+
+                GROUP BY
+                    pg.badminton_id
+            )
+
+            SELECT
+                p.badminton_id,
+                p.player_name,
+                p.gender,
+
+                COALESCE(
+                    pp.fantasy_points,
+                    0
+                ) AS fantasy_points,
+
+                COALESCE(
+                    gs.matches_played,
+                    0
+                ) AS matches_played,
+
+                COALESCE(
+                    gs.wins,
+                    0
+                ) AS wins,
+
+                (
+                    COALESCE(
+                        gs.matches_played,
+                        0
+                    )
+                    -
+                    COALESCE(
+                        gs.wins,
+                        0
+                    )
+                ) AS losses,
+
+                CASE
+                    WHEN
+                        COALESCE(
+                            gs.matches_played,
+                            0
+                        ) = 0
+                    THEN NULL
+
+                    ELSE CAST(
+                        100.0
+                        * gs.wins
+                        / gs.matches_played
+                        AS DECIMAL(5,1)
+                    )
+                END AS win_percentage,
+
+                COALESCE(
+                    gs.three_set_matches,
+                    0
+                ) AS three_set_matches,
+
+                CASE
+                    WHEN
+                        COALESCE(
+                            gs.matches_played,
+                            0
+                        ) = 0
+                    THEN NULL
+
+                    ELSE CAST(
+                        100.0
+                        * gs.three_set_matches
+                        / gs.matches_played
+                        AS DECIMAL(5,1)
+                    )
+                END AS three_set_match_percentage,
+
+                CASE
+                    WHEN
+                        COALESCE(
+                            gs.three_set_matches,
+                            0
+                        ) = 0
+                    THEN NULL
+
+                    ELSE CAST(
+                        100.0
+                        * gs.three_set_wins
+                        / gs.three_set_matches
+                        AS DECIMAL(5,1)
+                    )
+                END AS three_set_win_percentage,
+
+                CAST(
+                    gs.avg_opponent_points_in_wins
+                    AS DECIMAL(10,1)
+                ) AS avg_opponent_points_in_wins,
+
+                CAST(
+                    gs.avg_own_points_in_losses
+                    AS DECIMAL(10,1)
+                ) AS avg_own_points_in_losses,
+
+                CASE
+                    WHEN
+                        COALESCE(
+                            gs.home_matches,
+                            0
+                        ) = 0
+                    THEN NULL
+
+                    ELSE CAST(
+                        100.0
+                        * gs.home_wins
+                        / gs.home_matches
+                        AS DECIMAL(5,1)
+                    )
+                END AS home_win_percentage,
+
+                CASE
+                    WHEN
+                        COALESCE(
+                            gs.away_matches,
+                            0
+                        ) = 0
+                    THEN NULL
+
+                    ELSE CAST(
+                        100.0
+                        * gs.away_wins
+                        / gs.away_matches
+                        AS DECIMAL(5,1)
+                    )
+                END AS away_win_percentage,
+
+                COALESCE(
+                    gs.low8_wins,
+                    0
+                ) AS low8_wins,
+
+                CASE
+                    WHEN
+                        COALESCE(
+                            gs.single_matches,
+                            0
+                        ) = 0
+                    THEN NULL
+
+                    ELSE CAST(
+                        100.0
+                        * gs.single_wins
+                        / gs.single_matches
+                        AS DECIMAL(5,1)
+                    )
+                END AS single_win_percentage,
+
+                CASE
+                    WHEN
+                        COALESCE(
+                            gs.mixed_matches,
+                            0
+                        ) = 0
+                    THEN NULL
+
+                    ELSE CAST(
+                        100.0
+                        * gs.mixed_wins
+                        / gs.mixed_matches
+                        AS DECIMAL(5,1)
+                    )
+                END AS mixed_win_percentage,
+
+                CASE
+                    WHEN
+                        COALESCE(
+                            gs.gender_double_matches,
+                            0
+                        ) = 0
+                    THEN NULL
+
+                    ELSE CAST(
+                        100.0
+                        * gs.gender_double_wins
+                        / gs.gender_double_matches
+                        AS DECIMAL(5,1)
+                    )
+                END AS gender_double_win_percentage
+
+            FROM dbo.club_players cp
+
+            INNER JOIN dbo.badminton_players p
+                ON p.badminton_id =
+                    cp.badminton_id
+
+            LEFT JOIN PlayerPoints pp
+                ON pp.badminton_id =
+                    cp.badminton_id
+
+            LEFT JOIN GameStats gs
+                ON gs.badminton_id =
+                    cp.badminton_id
+
+            WHERE
+                cp.club_id = ?
+                AND cp.season_id = ?
+                AND cp.is_active = 1
+                AND (
+                    gs.badminton_id IS NOT NULL
+                    OR pp.badminton_id IS NOT NULL
+                )
+
+            ORDER BY
+                COALESCE(
+                    pp.fantasy_points,
+                    0
+                ) DESC,
+                COALESCE(
+                    gs.wins,
+                    0
+                ) DESC,
+                p.player_name ASC
+            """,
+
+            current_user.club_id,
+            CURRENT_SEASON,
+            current_user.department,
+
+            current_user.club_id,
+            CURRENT_SEASON,
+            current_user.department,
 
             current_user.club_id,
             CURRENT_SEASON,
@@ -5770,6 +6842,7 @@ def statistics():
             LEFT JOIN dbo.fantasy_team_rules ftr
                 ON ftr.club_id = ft.club_id
                 AND ftr.season_id = ft.season_id
+                AND ftr.department = ft.department
 
             LEFT JOIN dbo.fantasy_team_players ftp
                 ON ftp.fantasy_team_id = ft.id
@@ -5796,6 +6869,9 @@ def statistics():
 
                     AND fpe.season_id =
                         ft.season_id
+
+                    AND fpe.department =
+                        ft.department
 
                     AND cm.match_time >=
                         ftp.active_from
@@ -5832,6 +6908,7 @@ def statistics():
             WHERE
                 ft.club_id = ?
                 AND ft.season_id = ?
+                AND ft.department = ?
                 AND ft.status = 'active'
 
             GROUP BY
@@ -5845,7 +6922,8 @@ def statistics():
             """,
 
             current_user.club_id,
-            CURRENT_SEASON
+            CURRENT_SEASON,
+            current_user.department
         )
 
         fantasy_team_rows = cursor.fetchall()
@@ -5939,6 +7017,11 @@ def statistics():
                         or 0
                     ),
 
+                "three_set_match_percentage":
+                    nullable_float(
+                        row.three_set_match_percentage
+                    ),
+
                 "three_set_win_percentage":
                     nullable_float(
                         row.three_set_win_percentage
@@ -5992,15 +7075,21 @@ def statistics():
     # NORMAL / FUN KPI'S
     # =====================================================
 
-    point_leader = (
-        max(
-            players,
-            key=lambda p: (
-                p["fantasy_points"],
-                p["wins"],
-            )
+    # Fuld point-rangliste.
+    # Frontend viser de første 3 og kan udvides til hele listen.
+    point_ranking = sorted(
+        players,
+        key=lambda p: (
+            -p["fantasy_points"],
+            -p["wins"],
+            p["player_name"].lower(),
         )
-        if players
+    )
+
+
+    point_leader = (
+        point_ranking[0]
+        if point_ranking
         else None
     )
 
@@ -6012,7 +7101,8 @@ def statistics():
     ]
 
 
-    # Top 3 efter antal sejre.
+    # Fuld rangliste efter antal sejre.
+    # Frontend viser de første 3 og kan udvides til hele listen.
     most_wins = sorted(
         players_with_matches,
         key=lambda p: (
@@ -6021,7 +7111,7 @@ def statistics():
             -p["fantasy_points"],
             p["player_name"].lower(),
         )
-    )[:3]
+    )
 
 
     # Sejrsprocent kræver mindst 3 spillede kampe.
@@ -6035,6 +7125,7 @@ def statistics():
     ]
 
 
+    # Fuld rangliste efter sejrsprocent.
     best_win_rate = sorted(
         win_rate_candidates,
         key=lambda p: (
@@ -6043,18 +7134,50 @@ def statistics():
             -p["fantasy_points"],
             p["player_name"].lower(),
         )
-    )[:3]
+    )
+
+
+    # Spillere med mindst én 3-sætskamp.
+    three_set_candidates = [
+        player
+        for player in players
+        if (
+            player["three_set_matches"] > 0
+            and player["three_set_match_percentage"] is not None
+            and player["three_set_win_percentage"] is not None
+        )
+    ]
+
+
+    # Ranger efter hvor stor en andel af spillerens kampe,
+    # der går i 3 sæt. Frontend viser samtidig sejrsprocenten
+    # i netop 3-sætskampene.
+    best_three_set_rate = sorted(
+        three_set_candidates,
+        key=lambda p: (
+            -p["three_set_match_percentage"],
+            -p["three_set_matches"],
+            -p["three_set_win_percentage"],
+            p["player_name"].lower(),
+        )
+    )
 
 
     highlights = {
         "point_leader":
             point_leader,
 
+        "point_ranking":
+            point_ranking,
+
         "most_wins":
             most_wins,
 
         "best_win_rate":
             best_win_rate,
+
+        "best_three_set_rate":
+            best_three_set_rate,
     }
 
 
@@ -6160,6 +7283,7 @@ def dashboard():
             WHERE
                 club_id = ?
                 AND season_id = ?
+                AND department = ?
                 AND is_active = 1
 
             ORDER BY
@@ -6175,7 +7299,8 @@ def dashboard():
                 league_name
             """,
             current_user.club_id,
-            CURRENT_SEASON
+            CURRENT_SEASON,
+            current_user.department
         )
 
         team_rows = cursor.fetchall()
@@ -6201,12 +7326,32 @@ def dashboard():
                 ON fpe.badminton_id = cp.badminton_id
                 AND fpe.club_id = cp.club_id
                 AND fpe.season_id = cp.season_id
+                AND fpe.department = ?
 
             WHERE
                 cp.club_id = ?
                 AND cp.season_id = ?
                 AND cp.is_active = 1
                 AND p.gender = 'M'
+                AND (
+                    EXISTS (
+                        SELECT 1
+                        FROM dbo.v_department_players dp
+                        WHERE
+                            dp.club_id = cp.club_id
+                            AND dp.season_id = cp.season_id
+                            AND dp.department = ?
+                            AND dp.badminton_id = cp.badminton_id
+                    )
+                    OR NOT EXISTS (
+                        SELECT 1
+                        FROM dbo.v_department_players dp
+                        WHERE
+                            dp.club_id = cp.club_id
+                            AND dp.season_id = cp.season_id
+                            AND dp.department = ?
+                    )
+                )
 
             GROUP BY
                 p.badminton_id,
@@ -6216,8 +7361,11 @@ def dashboard():
                 COALESCE(SUM(fpe.points), 0) DESC,
                 p.player_name ASC
             """,
+            current_user.department,
             current_user.club_id,
-            CURRENT_SEASON
+            CURRENT_SEASON,
+            current_user.department,
+            current_user.department
         )
 
         top_men_rows = cursor.fetchall()
@@ -6243,12 +7391,32 @@ def dashboard():
                 ON fpe.badminton_id = cp.badminton_id
                 AND fpe.club_id = cp.club_id
                 AND fpe.season_id = cp.season_id
+                AND fpe.department = ?
 
             WHERE
                 cp.club_id = ?
                 AND cp.season_id = ?
                 AND cp.is_active = 1
                 AND p.gender = 'K'
+                AND (
+                    EXISTS (
+                        SELECT 1
+                        FROM dbo.v_department_players dp
+                        WHERE
+                            dp.club_id = cp.club_id
+                            AND dp.season_id = cp.season_id
+                            AND dp.department = ?
+                            AND dp.badminton_id = cp.badminton_id
+                    )
+                    OR NOT EXISTS (
+                        SELECT 1
+                        FROM dbo.v_department_players dp
+                        WHERE
+                            dp.club_id = cp.club_id
+                            AND dp.season_id = cp.season_id
+                            AND dp.department = ?
+                    )
+                )
 
             GROUP BY
                 p.badminton_id,
@@ -6258,8 +7426,11 @@ def dashboard():
                 COALESCE(SUM(fpe.points), 0) DESC,
                 p.player_name ASC
             """,
+            current_user.department,
             current_user.club_id,
-            CURRENT_SEASON
+            CURRENT_SEASON,
+            current_user.department,
+            current_user.department
         )
 
         top_women_rows = cursor.fetchall()
@@ -6310,6 +7481,7 @@ def dashboard():
             LEFT JOIN dbo.fantasy_team_rules ftr
                 ON ftr.club_id = ft.club_id
                 AND ftr.season_id = ft.season_id
+                AND ftr.department = ft.department
 
             LEFT JOIN dbo.fantasy_team_players ftp
                 ON ftp.fantasy_team_id = ft.id
@@ -6336,6 +7508,9 @@ def dashboard():
                     AND fpe.season_id =
                         ft.season_id
 
+                    AND fpe.department =
+                        ft.department
+
                     AND cm.match_time >=
                         ftp.active_from
 
@@ -6349,6 +7524,7 @@ def dashboard():
             WHERE
                 ft.club_id = ?
                 AND ft.season_id = ?
+                AND ft.department = ?
                 AND ft.status = 'active'
 
             GROUP BY
@@ -6361,7 +7537,8 @@ def dashboard():
                 ft.team_name ASC
             """,
             current_user.club_id,
-            CURRENT_SEASON
+            CURRENT_SEASON,
+            current_user.department
         )
 
         fantasy_team_rows = cursor.fetchall()
@@ -6395,6 +7572,7 @@ def dashboard():
             WHERE
                 ft.club_id = ?
                 AND ft.season_id = ?
+                AND ft.department = ?
                 AND ft.status = 'active'
                 AND ftp.active_to IS NULL
 
@@ -6408,7 +7586,8 @@ def dashboard():
                 p.player_name
             """,
             current_user.club_id,
-            CURRENT_SEASON
+            CURRENT_SEASON,
+            current_user.department
         )
 
         fantasy_team_player_rows = cursor.fetchall()
@@ -6649,6 +7828,7 @@ def admin_fantasy_teams():
             WHERE
                 ft.club_id = ?
                 AND ft.season_id = ?
+                AND ft.department = ?
 
             ORDER BY
                 CASE
@@ -6659,6 +7839,7 @@ def admin_fantasy_teams():
             """,
             current_user.club_id,
             CURRENT_SEASON,
+            current_user.department,
         )
 
         rows = cursor.fetchall()
@@ -6700,7 +7881,9 @@ def admin_fantasy_teams():
 
             FROM dbo.users
 
-            WHERE club_id = ?
+            WHERE
+                club_id = ?
+                AND department = ?
 
             ORDER BY
                 CASE
@@ -6710,6 +7893,7 @@ def admin_fantasy_teams():
                 display_name ASC
             """,
             current_user.club_id,
+            current_user.department,
         )
 
         user_rows = cursor.fetchall()
@@ -6780,9 +7964,11 @@ def admin_make_user_admin(
             WHERE
                 user_id = ?
                 AND club_id = ?
+                AND department = ?
             """,
             user_id,
             current_user.club_id,
+            current_user.department,
         )
 
         user = cursor.fetchone()
@@ -6814,9 +8000,11 @@ def admin_make_user_admin(
             WHERE
                 user_id = ?
                 AND club_id = ?
+                AND department = ?
             """,
             user_id,
             current_user.club_id,
+            current_user.department,
         )
 
         conn.commit()
@@ -6875,10 +8063,12 @@ def admin_delete_fantasy_team(
                 id = ?
                 AND club_id = ?
                 AND season_id = ?
+                AND department = ?
             """,
             fantasy_team_id,
             current_user.club_id,
             CURRENT_SEASON,
+            current_user.department,
         )
 
         team = cursor.fetchone()
@@ -6937,10 +8127,12 @@ def admin_delete_fantasy_team(
                 id = ?
                 AND club_id = ?
                 AND season_id = ?
+                AND department = ?
             """,
             fantasy_team_id,
             current_user.club_id,
             CURRENT_SEASON,
+            current_user.department,
         )
 
         conn.commit()
@@ -7027,7 +8219,9 @@ def admin_dashboard():
 
             FROM dbo.users
 
-            WHERE club_id = ?
+            WHERE
+                club_id = ?
+                AND department = ?
 
             ORDER BY
 
@@ -7040,7 +8234,8 @@ def admin_dashboard():
                 display_name
             """,
 
-            current_user.club_id
+            current_user.club_id,
+            current_user.department
         )
 
 
@@ -7076,6 +8271,8 @@ def admin_dashboard():
 
                 AND season_id = ?
 
+                AND department = ?
+
             ORDER BY
 
                 CASE department
@@ -7102,7 +8299,8 @@ def admin_dashboard():
             """,
 
             current_user.club_id,
-            CURRENT_SEASON
+            CURRENT_SEASON,
+            current_user.department
         )
 
 
@@ -7669,9 +8867,11 @@ def save_admin_teams():
             WHERE
                 club_id = ?
                 AND season_id = ?
+                AND department = ?
             """,
             current_user.club_id,
-            CURRENT_SEASON
+            CURRENT_SEASON,
+            current_user.department
         )
 
         # Activate selected teams
@@ -7689,12 +8889,14 @@ def save_admin_teams():
                 WHERE
                     club_id = ?
                     AND season_id = ?
+                    AND department = ?
                     AND id IN ({placeholders})
             """
 
             params = [
                 current_user.club_id,
                 CURRENT_SEASON,
+                current_user.department,
                 *selected_ids
             ]
 
@@ -7729,6 +8931,436 @@ def save_admin_teams():
     return redirect(
         url_for("admin_dashboard")
     )
+
+
+@app.route(
+    "/betting",
+    methods=[
+        "GET",
+        "POST",
+    ],
+)
+@login_required
+def betting():
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+
+        # =================================================
+        # CLUB
+        # =================================================
+
+        cursor.execute(
+            """
+            SELECT
+                club_id,
+                club_name
+            FROM dbo.badminton_clubs
+            WHERE club_id = ?
+            """,
+            current_user.club_id,
+        )
+
+        club_row = cursor.fetchone()
+
+        if club_row is None:
+            abort(404)
+
+
+        # =================================================
+        # ACTIVE CLUB PLAYERS
+        # =================================================
+
+        cursor.execute(
+            """
+            SELECT
+                p.badminton_id,
+                p.player_name,
+                p.gender
+            FROM dbo.club_players cp
+
+            INNER JOIN dbo.badminton_players p
+                ON p.badminton_id =
+                    cp.badminton_id
+
+            WHERE
+                cp.club_id = ?
+                AND cp.season_id = ?
+                AND cp.is_active = 1
+                AND (
+                    EXISTS (
+                        SELECT 1
+                        FROM dbo.v_department_players dp
+                        WHERE
+                            dp.club_id = cp.club_id
+                            AND dp.season_id = cp.season_id
+                            AND dp.department = ?
+                            AND dp.badminton_id = cp.badminton_id
+                    )
+                    OR NOT EXISTS (
+                        SELECT 1
+                        FROM dbo.v_department_players dp
+                        WHERE
+                            dp.club_id = cp.club_id
+                            AND dp.season_id = cp.season_id
+                            AND dp.department = ?
+                    )
+                )
+
+            ORDER BY
+                p.player_name ASC
+            """,
+            current_user.club_id,
+            CURRENT_SEASON,
+            current_user.department,
+            current_user.department,
+        )
+
+        player_rows = cursor.fetchall()
+
+        players = [
+            {
+                "badminton_id":
+                    row.badminton_id,
+
+                "player_name":
+                    row.player_name,
+
+                "gender":
+                    row.gender,
+            }
+            for row in player_rows
+        ]
+
+        player_lookup = {
+            str(player["badminton_id"]): player
+            for player in players
+        }
+
+
+        # =================================================
+        # SAVE NEW BETTING SLIP
+        # =================================================
+
+        if request.method == "POST":
+
+            badminton_ids = (
+                request.form.getlist(
+                    "badminton_id[]"
+                )
+            )
+
+            predictions = (
+                request.form.getlist(
+                    "prediction[]"
+                )
+            )
+
+            if len(badminton_ids) != len(predictions):
+
+                flash(
+                    "Kuponen kunne ikke gemmes. "
+                    "Prøv igen.",
+                    "error",
+                )
+
+                return redirect(
+                    url_for("betting")
+                )
+
+            picks = []
+            seen_players = set()
+
+            for badminton_id, prediction in zip(
+                badminton_ids,
+                predictions,
+            ):
+
+                badminton_id = (
+                    badminton_id.strip()
+                )
+
+                prediction = (
+                    prediction
+                    .strip()
+                    .lower()
+                )
+
+                # Tomme ekstra linjer ignoreres.
+                if (
+                    not badminton_id
+                    and
+                    not prediction
+                ):
+                    continue
+
+                if badminton_id not in player_lookup:
+
+                    flash(
+                        "En af de valgte spillere er "
+                        "ikke længere aktiv i klubben.",
+                        "error",
+                    )
+
+                    return redirect(
+                        url_for("betting")
+                    )
+
+                if prediction not in {
+                    "win",
+                    "loss",
+                }:
+
+                    flash(
+                        "Alle linjer skal have et valg: "
+                        "Vinder eller Taber.",
+                        "error",
+                    )
+
+                    return redirect(
+                        url_for("betting")
+                    )
+
+                if badminton_id in seen_players:
+
+                    flash(
+                        "Samme spiller kan kun vælges "
+                        "én gang på samme kupon.",
+                        "error",
+                    )
+
+                    return redirect(
+                        url_for("betting")
+                    )
+
+                seen_players.add(
+                    badminton_id
+                )
+
+                picks.append(
+                    {
+                        "badminton_id":
+                            badminton_id,
+
+                        "prediction":
+                            prediction,
+                    }
+                )
+
+            if not picks:
+
+                flash(
+                    "Tilføj mindst én spiller til kuponen.",
+                    "error",
+                )
+
+                return redirect(
+                    url_for("betting")
+                )
+
+            try:
+
+                cursor.execute(
+                    """
+                    INSERT INTO dbo.betting_slips (
+                        user_id,
+                        club_id,
+                        season_id,
+                        department,
+                        status
+                    )
+
+                    OUTPUT INSERTED.id
+
+                    VALUES (
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        'open'
+                    )
+                    """,
+                    int(current_user.id),
+                    current_user.club_id,
+                    CURRENT_SEASON,
+                    current_user.department,
+                )
+
+                betting_slip_id = (
+                    cursor.fetchone()[0]
+                )
+
+                for line_number, pick in enumerate(
+                    picks,
+                    start=1,
+                ):
+
+                    cursor.execute(
+                        """
+                        INSERT INTO dbo.betting_picks (
+                            betting_slip_id,
+                            line_number,
+                            badminton_id,
+                            prediction
+                        )
+
+                        VALUES (
+                            ?,
+                            ?,
+                            ?,
+                            ?
+                        )
+                        """,
+                        betting_slip_id,
+                        line_number,
+                        pick["badminton_id"],
+                        pick["prediction"],
+                    )
+
+                conn.commit()
+
+            except Exception:
+
+                conn.rollback()
+                raise
+
+            flash(
+                f"Kupon #{betting_slip_id} er gemt.",
+                "success",
+            )
+
+            return redirect(
+                url_for("betting")
+            )
+
+
+        # =================================================
+        # CURRENT USER'S BETTING HISTORY
+        # =================================================
+
+        cursor.execute(
+            """
+            SELECT TOP 200
+                bs.id AS slip_id,
+                bs.status,
+                bs.created_at,
+
+                bp.line_number,
+                bp.prediction,
+                bp.actual_result,
+                bp.result,
+
+                p.badminton_id,
+                p.player_name
+
+            FROM dbo.betting_slips bs
+
+            INNER JOIN dbo.betting_picks bp
+                ON bp.betting_slip_id =
+                    bs.id
+
+            INNER JOIN dbo.badminton_players p
+                ON p.badminton_id =
+                    bp.badminton_id
+
+            WHERE
+                bs.user_id = ?
+                AND bs.club_id = ?
+                AND bs.season_id = ?
+                AND bs.department = ?
+
+            ORDER BY
+                bs.created_at DESC,
+                bs.id DESC,
+                bp.line_number ASC
+            """,
+            int(current_user.id),
+            current_user.club_id,
+            CURRENT_SEASON,
+            current_user.department,
+        )
+
+        betting_rows = cursor.fetchall()
+
+        betting_slips_by_id = {}
+
+        for row in betting_rows:
+
+            slip_id = int(
+                row.slip_id
+            )
+
+            if slip_id not in betting_slips_by_id:
+
+                betting_slips_by_id[
+                    slip_id
+                ] = {
+                    "id":
+                        slip_id,
+
+                    "status":
+                        row.status,
+
+                    "created_at":
+                        row.created_at,
+
+                    "picks":
+                        [],
+                }
+
+            betting_slips_by_id[
+                slip_id
+            ][
+                "picks"
+            ].append(
+                {
+                    "line_number":
+                        int(
+                            row.line_number
+                        ),
+
+                    "badminton_id":
+                        row.badminton_id,
+
+                    "player_name":
+                        row.player_name,
+
+                    "prediction":
+                        row.prediction,
+
+                    "actual_result":
+                        row.actual_result,
+
+                    "result":
+                        row.result,
+                }
+            )
+
+        betting_slips = list(
+            betting_slips_by_id.values()
+        )
+
+        club = {
+            "id":
+                club_row.club_id,
+
+            "name":
+                club_row.club_name,
+        }
+
+        return render_template(
+            "betting.html",
+            club=club,
+            players=players,
+            betting_slips=betting_slips,
+            current_season=CURRENT_SEASON,
+        )
+
+    finally:
+        cursor.close()
+        conn.close()
 
 
 # =========================================================

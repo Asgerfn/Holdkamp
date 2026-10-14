@@ -2609,3 +2609,59 @@ a {
     max-width: 1500px;
     margin: 0 auto;
 }
+.select-wrap {
+    position: relative;
+    width: 100%;
+}
+
+.styled-select {
+    width: 100%;
+    min-height: 58px;
+    padding: 0 48px 0 18px;
+
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.04);
+    color: #f3f7ff;
+
+    font: inherit;
+    font-size: 16px;
+    font-weight: 500;
+
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+
+    transition:
+        border-color .18s ease,
+        background .18s ease,
+        box-shadow .18s ease;
+}
+
+.styled-select:hover {
+    border-color: rgba(255,255,255,.16);
+    background: rgba(255,255,255,.055);
+}
+
+.styled-select:focus {
+    border-color: rgba(99, 229, 215, .55);
+    background: rgba(255,255,255,.06);
+    box-shadow: 0 0 0 4px rgba(99, 229, 215, .10);
+}
+
+.styled-select:invalid {
+    color: rgba(255,255,255,.45);
+}
+
+.select-arrow {
+    position: absolute;
+    top: 50%;
+    right: 16px;
+    transform: translateY(-50%);
+    pointer-events: none;
+
+    color: rgba(255,255,255,.60);
+    font-size: 18px;
+    line-height: 1;
+}

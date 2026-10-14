@@ -233,6 +233,18 @@ def get_match(
             club_id,
             season_id,
 
+            (
+                SELECT TOP 1
+                    cdt.department
+                FROM dbo.club_dashboard_teams cdt
+                WHERE
+                    cdt.club_id = cm.club_id
+                    AND cdt.season_id = cm.season_id
+                    AND cdt.league_group_id = cm.league_group_id
+                    AND cdt.team_name = cm.club_team_name
+                ORDER BY cdt.id
+            ) AS department,
+
             club_team_name,
 
             match_time,
@@ -242,9 +254,9 @@ def get_match(
 
             result
 
-        FROM dbo.club_matches
+        FROM dbo.club_matches cm
 
-        WHERE id = ?
+        WHERE cm.id = ?
         """,
 
         club_match_id
@@ -270,6 +282,9 @@ def get_match(
 
         "season_id":
             row.season_id,
+
+        "department":
+            row.department,
 
         "club_team_name":
             row.club_team_name,
@@ -554,6 +569,7 @@ def insert_event(
 
             club_id,
             season_id,
+            department,
 
             club_match_id,
 
@@ -586,12 +602,14 @@ def insert_event(
             ?,
             ?,
             ?,
+            ?,
             ?
         )
         """,
 
         match["club_id"],
         match["season_id"],
+        match.get("department"),
 
         match["id"],
 
@@ -1390,6 +1408,10 @@ def recalculate_match_points(
                     match[
                         "season_id"
                     ],
+                department=
+                    match.get(
+                        "department"
+                    ),
                 as_of=
                     match[
                         "match_time"

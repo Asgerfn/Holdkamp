@@ -11,6 +11,13 @@ Dashboard · Holdkamp
 
 
 {% block content %}
+{% set department_names = {
+    "SEN": "Senior",
+    "U": "Ungdom",
+    "MOT": "Motionist",
+    "VET": "Veteran"
+} %}
+
 
 
 
@@ -522,7 +529,9 @@ Dashboard · Holdkamp
     {% if club %}
 
         <span class="pill">
-            {{ club.name }} · FANTASY {{ current_season }}
+            {{ club.name }}
+            · {{ department_names.get(current_user.department, current_user.department) }}
+            · FANTASY {{ current_season }}
         </span>
 
     {% else %}
@@ -709,7 +718,7 @@ Dashboard · Holdkamp
 
             <p class="card-copy">
 
-                Hvem fører klubbens fantasy manager lige nu.
+                Hvem fører fantasy manageren i din afdeling lige nu.
 
             </p>
 
@@ -891,7 +900,7 @@ Dashboard · Holdkamp
 
                 <div class="dashboard-empty-state">
 
-                    Der er endnu ingen aktive fantasyhold i klubben.
+                    Der er endnu ingen aktive fantasyhold i din afdeling.
 
                 </div>
 
@@ -1255,7 +1264,7 @@ Dashboard · Holdkamp
 
 
 
-                    De hold og rækker som klubben har valgt
+                    De hold og rækker som din afdeling har valgt
 
                     til holdkampsoverblikket.
 
@@ -1267,7 +1276,7 @@ Dashboard · Holdkamp
 
                     Der er endnu ikke valgt nogen hold til
 
-                    klubbens dashboard.
+                    afdelingens dashboard.
 
 
 

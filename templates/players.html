@@ -6,6 +6,13 @@ Spillere · {{ club.name if club else "Holdkamp" }}
 
 
 {% block content %}
+{% set department_names = {
+    "SEN": "Senior",
+    "U": "Ungdom",
+    "MOT": "Motionist",
+    "VET": "Veteran"
+} %}
+
 
 
 <section class="players-header">
@@ -24,8 +31,8 @@ Spillere · {{ club.name if club else "Holdkamp" }}
 
         <p>
             {{ club.name }}
-            ·
-            {{ player_count }} spillere
+            · {{ department_names.get(current_user.department, current_user.department) }}
+            · {{ player_count }} spillere
         </p>
 
         {% endif %}

@@ -5,6 +5,248 @@ Admin · {{ club.name }}
 {% endblock %}
 
 {% block content %}
+{% set department_names = {
+    "SEN": "Senior",
+    "U": "Ungdom",
+    "MOT": "Motionist",
+    "VET": "Veteran"
+} %}
+
+
+
+<style>
+
+    .admin-page {
+        max-width: 1180px;
+        margin: 0 auto;
+    }
+
+    .admin-header {
+        margin-bottom: 24px;
+    }
+
+    .admin-header h1 {
+        margin: 5px 0 7px;
+        font-size: 34px;
+    }
+
+    .admin-header p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+    }
+
+    .admin-navigation-grid {
+        display: grid;
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 26px;
+    }
+
+    .admin-navigation-card {
+        position: relative;
+        min-height: 155px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 18px;
+
+        border-radius: 17px;
+        border: 1px solid rgba(255,255,255,.08);
+        background: rgba(15,25,40,.78);
+
+        color: inherit;
+        text-decoration: none;
+
+        transition:
+            transform .15s ease,
+            border-color .15s ease,
+            background .15s ease;
+    }
+
+    .admin-navigation-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(94,234,212,.22);
+        background: rgba(255,255,255,.04);
+    }
+
+    .admin-navigation-card-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: flex-start;
+    }
+
+    .admin-navigation-icon {
+        width: 42px;
+        height: 42px;
+        flex: 0 0 auto;
+
+        display: grid;
+        place-items: center;
+
+        border-radius: 12px;
+        border: 1px solid rgba(94,234,212,.14);
+        background: rgba(94,234,212,.07);
+
+        color: var(--accent);
+        font-size: 18px;
+        font-weight: 900;
+    }
+
+    .admin-navigation-arrow {
+        color: var(--muted);
+        font-size: 17px;
+        transition: transform .15s ease;
+    }
+
+    .admin-navigation-card:hover
+    .admin-navigation-arrow {
+        transform: translateX(3px);
+        color: var(--accent);
+    }
+
+    .admin-navigation-kicker {
+        display: block;
+        margin-bottom: 6px;
+
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 850;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+
+    .admin-navigation-card h2 {
+        margin: 0 0 7px;
+        font-size: 18px;
+    }
+
+    .admin-navigation-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+    }
+
+    .admin-navigation-meta {
+        display: flex;
+        gap: 7px;
+        flex-wrap: wrap;
+    }
+
+    .admin-navigation-pill {
+        padding: 5px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,.07);
+        background: rgba(255,255,255,.025);
+
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 800;
+    }
+
+    .admin-overview-heading {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: flex-end;
+        margin: 30px 0 14px;
+    }
+
+    .admin-overview-heading h2 {
+        margin: 0;
+        font-size: 21px;
+    }
+
+    .admin-overview-heading p {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+    }
+
+    .admin-section-anchor {
+        scroll-margin-top: 20px;
+    }
+
+    @media (max-width: 760px) {
+
+        .admin-navigation-grid {
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .admin-navigation-card {
+            min-height: 132px;
+            padding: 16px;
+        }
+
+        .admin-header h1 {
+            font-size: 30px;
+        }
+
+        .admin-overview-heading {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+    }
+
+
+    .admin-tabs {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 0 0 24px;
+    }
+
+    .admin-tab {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 11px;
+        border: 1px solid rgba(255,255,255,.10);
+        background: rgba(255,255,255,.025);
+        color: inherit;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 850;
+        transition:
+            background .15s ease,
+            border-color .15s ease,
+            color .15s ease;
+    }
+
+    .admin-tab:hover {
+        border-color: rgba(94,234,212,.22);
+        background: rgba(255,255,255,.045);
+    }
+
+    .admin-tab.active {
+        background: var(--accent);
+        color: #07111f;
+        border-color: var(--accent);
+    }
+
+    @media (max-width: 650px) {
+        .admin-tabs {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .admin-tab {
+            padding: 0 8px;
+            font-size: 11px;
+        }
+    }
+
+</style>
+
+<div class="admin-page">
 
 
 <!-- =====================================================
@@ -24,11 +266,241 @@ Admin · {{ club.name }}
         </h1>
 
         <p>
-            Administrér klubbens profiler og
-            indholdet på dashboardet.
+            {{ department_names.get(current_user.department, current_user.department) }}
+            · alt det administrative samlet ét sted.
         </p>
 
     </div>
+
+</section>
+
+
+<nav class="admin-tabs" aria-label="Admin navigation">
+    <a
+        href="{{ url_for('admin_dashboard') }}"
+        class="admin-tab {% if request.endpoint == 'admin_dashboard' %}active{% endif %}"
+    >
+        Oversigt
+    </a>
+
+    <a
+        href="{{ url_for('admin_team_builder') }}"
+        class="admin-tab {% if request.endpoint == 'admin_team_builder' %}active{% endif %}"
+    >
+        Holdregler
+    </a>
+
+    <a
+        href="{{ url_for('admin_fantasy_teams') }}"
+        class="admin-tab {% if request.endpoint == 'admin_fantasy_teams' %}active{% endif %}"
+    >
+        Fantasyhold
+    </a>
+</nav>
+
+
+
+
+<!-- =====================================================
+     ADMIN NAVIGATION
+     ===================================================== -->
+
+<section class="admin-navigation-grid">
+
+    <a
+        class="admin-navigation-card"
+        href="#dashboard-hold"
+    >
+
+        <div class="admin-navigation-card-top">
+
+            <div class="admin-navigation-icon">
+                H
+            </div>
+
+            <span class="admin-navigation-arrow">
+                →
+            </span>
+
+        </div>
+
+        <div>
+
+            <span class="admin-navigation-kicker">
+                Dashboard
+            </span>
+
+            <h2>
+                Hold & kampdata
+            </h2>
+
+            <p>
+                Vælg hvilke hold der vises på dashboardet,
+                hent hold fra BadmintonPlayer og opdatér kampdata.
+            </p>
+
+        </div>
+
+        <div class="admin-navigation-meta">
+
+            <span class="admin-navigation-pill">
+                {{ team_count }} hold
+            </span>
+
+            <span class="admin-navigation-pill">
+                Sæson {{ current_season }}
+            </span>
+
+        </div>
+
+    </a>
+
+
+    <a
+        class="admin-navigation-card"
+        href="{{ url_for('admin_team_builder') }}"
+    >
+
+        <div class="admin-navigation-card-top">
+
+            <div class="admin-navigation-icon">
+                R
+            </div>
+
+            <span class="admin-navigation-arrow">
+                →
+            </span>
+
+        </div>
+
+        <div>
+
+            <span class="admin-navigation-kicker">
+                Fantasy
+            </span>
+
+            <h2>
+                Holdregler
+            </h2>
+
+            <p>
+                Bestem antal herrer og damer,
+                kaptajnregler og antal udskiftninger.
+            </p>
+
+        </div>
+
+        <div class="admin-navigation-meta">
+
+            <span class="admin-navigation-pill">
+                Holdbygning
+            </span>
+
+            <span class="admin-navigation-pill">
+                Regelændringer
+            </span>
+
+        </div>
+
+    </a>
+
+
+    <a
+        class="admin-navigation-card"
+        href="{{ url_for('admin_fantasy_teams') }}"
+    >
+
+        <div class="admin-navigation-card-top">
+
+            <div class="admin-navigation-icon">
+                F
+            </div>
+
+            <span class="admin-navigation-arrow">
+                →
+            </span>
+
+        </div>
+
+        <div>
+
+            <span class="admin-navigation-kicker">
+                Fantasy
+            </span>
+
+            <h2>
+                Fantasyhold
+            </h2>
+
+            <p>
+                Se alle oprettede fantasyhold,
+                deres status og udskiftninger samt slet hold.
+            </p>
+
+        </div>
+
+        <div class="admin-navigation-meta">
+
+            <span class="admin-navigation-pill">
+                Holdoversigt
+            </span>
+
+            <span class="admin-navigation-pill">
+                Administration
+            </span>
+
+        </div>
+
+    </a>
+
+
+    <a
+        class="admin-navigation-card"
+        href="{{ url_for('admin_fantasy_teams') }}#administratorer"
+    >
+
+        <div class="admin-navigation-card-top">
+
+            <div class="admin-navigation-icon">
+                B
+            </div>
+
+            <span class="admin-navigation-arrow">
+                →
+            </span>
+
+        </div>
+
+        <div>
+
+            <span class="admin-navigation-kicker">
+                Klub
+            </span>
+
+            <h2>
+                Brugere & administratorer
+            </h2>
+
+            <p>
+                Se afdelingens brugere og giv
+                andre medlemmer administratoradgang.
+            </p>
+
+        </div>
+
+        <div class="admin-navigation-meta">
+
+            <span class="admin-navigation-pill">
+                {{ member_count }} profiler
+            </span>
+
+            <span class="admin-navigation-pill">
+                {{ admin_count }} admins
+            </span>
+
+        </div>
+
+    </a>
 
 </section>
 
@@ -83,6 +555,25 @@ Admin · {{ club.name }}
 <!-- =====================================================
      DASHBOARD TEAMS
      ===================================================== -->
+
+<div
+    class="admin-overview-heading admin-section-anchor"
+    id="dashboard-hold"
+>
+    <div>
+        <span class="eyebrow">
+            Direkte administration
+        </span>
+
+        <h2>
+            Dashboard & hold
+        </h2>
+
+        <p>
+            Her kan du arbejde direkte med holdene uden at forlade siden.
+        </p>
+    </div>
+</div>
 
 <section class="members-card">
 
@@ -467,7 +958,7 @@ Admin · {{ club.name }}
             </span>
 
             <h2>
-                Personer i klubben
+                Afdelingens medlemmer
             </h2>
 
         </div>

@@ -5,6 +5,13 @@ Admin · Fantasyhold · {{ club.name }}
 {% endblock %}
 
 {% block content %}
+{% set department_names = {
+    "SEN": "Senior",
+    "U": "Ungdom",
+    "MOT": "Motionist",
+    "VET": "Veteran"
+} %}
+
 
 <section class="admin-header">
     <div>
@@ -17,37 +24,37 @@ Admin · Fantasyhold · {{ club.name }}
         </h1>
 
         <p>
-            Administrér klubbens fantasyhold.
+            Administrér fantasyhold for
+            {{ department_names.get(current_user.department, current_user.department) }}.
         </p>
     </div>
 </section>
 
 
-<nav
-    aria-label="Admin navigation"
-    style="
-        display: flex;
-        gap: 8px;
-        margin: 0 0 24px 0;
-        flex-wrap: wrap;
-    "
->
+
+<nav class="admin-tabs" aria-label="Admin navigation">
     <a
         href="{{ url_for('admin_dashboard') }}"
-        class="ghost-button compact"
-        style="text-decoration: none;"
+        class="admin-tab {% if request.endpoint == 'admin_dashboard' %}active{% endif %}"
     >
         Oversigt
     </a>
 
     <a
+        href="{{ url_for('admin_team_builder') }}"
+        class="admin-tab {% if request.endpoint == 'admin_team_builder' %}active{% endif %}"
+    >
+        Holdregler
+    </a>
+
+    <a
         href="{{ url_for('admin_fantasy_teams') }}"
-        class="primary-button"
-        style="text-decoration: none;"
+        class="admin-tab {% if request.endpoint == 'admin_fantasy_teams' %}active{% endif %}"
     >
         Fantasyhold
     </a>
 </nav>
+
 
 
 <section class="admin-stats">
@@ -227,6 +234,7 @@ Admin · Fantasyhold · {{ club.name }}
 
 <section
     class="members-card"
+    id="administratorer"
     style="margin-top: 24px;"
 >
 
@@ -249,7 +257,7 @@ Admin · Fantasyhold · {{ club.name }}
                     margin-bottom: 0;
                 "
             >
-                Giv andre brugere i klubben administratoradgang.
+                Giv andre brugere i afdelingen administratoradgang.
             </p>
 
         </div>
@@ -516,6 +524,56 @@ Admin · Fantasyhold · {{ club.name }}
     }
 
 }
+
+
+    .admin-tabs {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 0 0 24px;
+    }
+
+    .admin-tab {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 11px;
+        border: 1px solid rgba(255,255,255,.10);
+        background: rgba(255,255,255,.025);
+        color: inherit;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 850;
+        transition:
+            background .15s ease,
+            border-color .15s ease,
+            color .15s ease;
+    }
+
+    .admin-tab:hover {
+        border-color: rgba(94,234,212,.22);
+        background: rgba(255,255,255,.045);
+    }
+
+    .admin-tab.active {
+        background: var(--accent);
+        color: #07111f;
+        border-color: var(--accent);
+    }
+
+    @media (max-width: 650px) {
+        .admin-tabs {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .admin-tab {
+            padding: 0 8px;
+            font-size: 11px;
+        }
+    }
 
 </style>
 

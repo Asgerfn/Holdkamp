@@ -43,6 +43,9 @@ def ensure_fantasy_point_tables():
                     season_id INT
                         NOT NULL,
 
+                    department NVARCHAR(10)
+                        NULL,
+
                     club_match_id INT
                         NOT NULL,
 
@@ -114,6 +117,17 @@ def ensure_fantasy_point_tables():
                     REFERENCES dbo.badminton_players(
                         badminton_id
                     ),
+
+                    CONSTRAINT CK_fantasy_point_events_department
+                        CHECK (
+                            department IS NULL
+                            OR department IN (
+                                'SEN',
+                                'U',
+                                'MOT',
+                                'VET'
+                            )
+                        ),
 
                     CONSTRAINT UQ_fantasy_point_events_event_key
                     UNIQUE (
@@ -282,6 +296,41 @@ def ensure_fantasy_point_tables():
         print(
             "[OK] dbo.fantasy_point_events er klar."
         )
+
+
+        # =================================================
+        # INDEX: DEPARTMENT
+        # =================================================
+
+        cursor.execute(
+            """
+            IF NOT EXISTS (
+                SELECT 1
+                FROM sys.indexes
+                WHERE
+                    name =
+                        'IX_fantasy_point_events_department'
+                    AND object_id =
+                        OBJECT_ID(
+                            'dbo.fantasy_point_events'
+                        )
+            )
+            BEGIN
+
+                CREATE INDEX
+                    IX_fantasy_point_events_department
+                ON dbo.fantasy_point_events (
+                    club_id,
+                    department,
+                    season_id,
+                    badminton_id
+                );
+
+            END
+            """
+        )
+
+        conn.commit()
 
 
         # =================================================

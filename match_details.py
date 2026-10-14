@@ -708,7 +708,7 @@ def parse_game_label(value):
     #   4. D
     #
     match = re.match(
-        r"^(\d+)\.\s*(MD|DS|HS|DD|HD|XD|S|D)$",
+        r"^(\d+)\.\s*(MD|DS|HS|DD|HD|MD|S|D)$",
         value,
         re.IGNORECASE
     )

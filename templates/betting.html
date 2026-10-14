@@ -1,0 +1,898 @@
+{% extends "base.html" %}
+
+{% block title %}
+Betting · {{ club.name }}
+{% endblock %}
+
+{% block content %}
+{% set department_names = {
+    "SEN": "Senior",
+    "U": "Ungdom",
+    "MOT": "Motionist",
+    "VET": "Veteran"
+} %}
+
+
+<style>
+
+    .betting-page {
+        max-width: 1050px;
+        margin: 0 auto;
+    }
+
+    .betting-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        align-items: flex-end;
+        margin-bottom: 26px;
+    }
+
+    .betting-header h1 {
+        margin: 5px 0 7px;
+        font-size: 34px;
+    }
+
+    .betting-header p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+    }
+
+    .season-pill {
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,.09);
+        background: rgba(255,255,255,.04);
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .betting-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 20px;
+    }
+
+    .betting-card {
+        border-radius: 18px;
+        border: 1px solid rgba(255,255,255,.08);
+        background: rgba(15,25,40,.78);
+        padding: 22px;
+        min-width: 0;
+    }
+
+    .betting-card h2 {
+        margin: 0;
+        font-size: 20px;
+    }
+
+    .betting-copy {
+        margin: 6px 0 18px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .coupon-head {
+        display: grid;
+        grid-template-columns:
+            42px minmax(220px, 1fr) 105px 105px 42px;
+        gap: 8px;
+        padding: 0 0 8px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+    }
+
+    .coupon-lines {
+        display: grid;
+        gap: 8px;
+    }
+
+    .coupon-row {
+        display: grid;
+        grid-template-columns:
+            42px minmax(220px, 1fr) 105px 105px 42px;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .coupon-number {
+        min-height: 42px;
+        display: grid;
+        place-items: center;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.07);
+        background: rgba(255,255,255,.025);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .coupon-player {
+        width: 100%;
+        min-width: 0;
+        min-height: 42px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.10);
+        background: #0c1828;
+        color: inherit;
+        padding: 0 11px;
+        font: inherit;
+        font-size: 13px;
+        outline: none;
+    }
+
+    .coupon-choice {
+        position: relative;
+        min-width: 0;
+    }
+
+    .coupon-choice input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .coupon-choice span {
+        min-height: 42px;
+        width: 100%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.09);
+        background: rgba(255,255,255,.03);
+
+        font-size: 11px;
+        font-weight: 900;
+
+        cursor: pointer;
+        user-select: none;
+
+        transition:
+            border-color .15s ease,
+            background .15s ease,
+            color .15s ease,
+            transform .15s ease;
+    }
+
+    .coupon-choice input:checked + span {
+        border-color: var(--accent);
+        background: rgba(73,230,196,.12);
+        color: var(--accent);
+    }
+
+    .coupon-choice span:active {
+        transform: scale(.98);
+    }
+
+    .remove-line {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.08);
+        background: rgba(255,255,255,.025);
+        color: var(--muted);
+        font: inherit;
+        font-size: 18px;
+        cursor: pointer;
+    }
+
+    .coupon-actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 18px;
+    }
+
+    .add-line-button,
+    .save-coupon-button {
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 11px;
+        font: inherit;
+        font-weight: 850;
+        cursor: pointer;
+    }
+
+    .add-line-button {
+        border: 1px solid rgba(255,255,255,.10);
+        background: rgba(255,255,255,.04);
+        color: inherit;
+    }
+
+    .save-coupon-button {
+        border: 0;
+        background: var(--accent);
+        color: #07111f;
+    }
+
+    .coupon-note {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+    }
+
+    .history-list {
+        display: grid;
+        gap: 12px;
+    }
+
+    .history-card {
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,.07);
+        background: rgba(255,255,255,.025);
+        overflow: hidden;
+    }
+
+    .history-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: center;
+        padding: 13px 14px;
+        border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+
+    .history-title {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .history-title strong {
+        font-size: 13px;
+    }
+
+    .history-title span,
+    .history-status {
+        color: var(--muted);
+        font-size: 10px;
+    }
+
+    .history-status {
+        padding: 5px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,.08);
+        background: rgba(255,255,255,.03);
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+    .history-row {
+        display: grid;
+        grid-template-columns:
+            34px minmax(0, 1fr) 82px 88px;
+        gap: 8px;
+        align-items: center;
+        min-height: 42px;
+        padding: 8px 14px;
+        border-bottom: 1px solid rgba(255,255,255,.05);
+        font-size: 12px;
+    }
+
+    .history-row:last-child {
+        border-bottom: 0;
+    }
+
+    .history-number {
+        color: var(--muted);
+        font-weight: 800;
+    }
+
+    .history-prediction {
+        font-weight: 900;
+    }
+
+    .history-result {
+        justify-self: end;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+    .history-result.correct {
+        color: var(--accent);
+    }
+
+    .history-result.wrong {
+        color: #ff8f8f;
+    }
+
+    .empty-history {
+        padding: 24px 0 8px;
+        color: var(--muted);
+        font-size: 13px;
+    }
+
+    @media (max-width: 700px) {
+
+        .betting-header {
+            align-items: flex-start;
+            flex-direction: column;
+            margin-bottom: 18px;
+        }
+
+        .betting-card {
+            padding: 14px;
+            border-radius: 14px;
+        }
+
+        .coupon-head {
+            display: none;
+        }
+
+        .coupon-lines {
+            gap: 10px;
+        }
+
+        .coupon-row {
+            grid-template-columns:
+                34px minmax(0, 1fr) 38px;
+            gap: 7px;
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,.06);
+            background: rgba(255,255,255,.02);
+        }
+
+        .coupon-number {
+            grid-column: 1;
+            grid-row: 1;
+            min-height: 40px;
+        }
+
+        .coupon-player {
+            grid-column: 2;
+            grid-row: 1;
+            min-height: 40px;
+            font-size: 12px;
+        }
+
+        .remove-line {
+            grid-column: 3;
+            grid-row: 1;
+            width: 38px;
+            height: 40px;
+        }
+
+        .coupon-choice {
+            grid-row: 2;
+        }
+
+        .coupon-choice.choice-win {
+            grid-column: 1 / 3;
+            margin-right: calc(50% + 3px);
+        }
+
+        .coupon-choice.choice-loss {
+            grid-column: 1 / 3;
+            margin-left: calc(50% + 3px);
+        }
+
+        .coupon-choice span {
+            min-height: 39px;
+        }
+
+        .coupon-actions {
+            flex-direction: column;
+        }
+
+        .add-line-button,
+        .save-coupon-button {
+            width: 100%;
+        }
+
+        .history-row {
+            grid-template-columns:
+                28px minmax(0, 1fr) 68px;
+        }
+
+        .history-result {
+            grid-column: 2 / 4;
+            justify-self: start;
+            padding-left: 0;
+        }
+
+    }
+
+</style>
+
+
+<div class="betting-page">
+
+    <section class="betting-header">
+
+        <div>
+
+            <span class="eyebrow">
+                Tip-kupon
+            </span>
+
+            <h1>
+                Betting
+            </h1>
+
+            <p>
+                Vælg spillere og gæt på, om de vinder eller taber.
+            </p>
+
+        </div>
+
+        <span class="season-pill">
+            Sæson {{ current_season }}
+        </span>
+
+    </section>
+
+
+    <section class="betting-grid">
+
+        <article class="betting-card">
+
+            <h2>
+                Ny kupon
+            </h2>
+
+            <p class="betting-copy">
+                Tilføj én linje ad gangen. Samme spiller kan kun vælges én gang på samme kupon.
+            </p>
+
+            <form
+                method="post"
+                id="bettingForm"
+            >
+
+                <div class="coupon-head">
+
+                    <span>#</span>
+
+                    <span>
+                        Spiller
+                    </span>
+
+                    <span>
+                        Vinder
+                    </span>
+
+                    <span>
+                        Taber
+                    </span>
+
+                    <span></span>
+
+                </div>
+
+                <div
+                    class="coupon-lines"
+                    id="couponLines"
+                ></div>
+
+                <div class="coupon-actions">
+
+                    <button
+                        type="button"
+                        class="add-line-button"
+                        id="addCouponLine"
+                    >
+                        + Tilføj linje
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="save-coupon-button"
+                    >
+                        Gem kupon
+                    </button>
+
+                </div>
+
+                <p class="coupon-note">
+                    Første version gemmer dit gæt i Azure. Automatisk afgørelse mod den næste spillede kamp kan kobles på bagefter.
+                </p>
+
+            </form>
+
+        </article>
+
+
+        <article class="betting-card">
+
+            <h2>
+                Mine kuponer
+            </h2>
+
+            <p class="betting-copy">
+                Dine gemte kuponer for {{ club.name }}
+                · {{ department_names.get(current_user.department, current_user.department) }}.
+            </p>
+
+            {% if betting_slips %}
+
+                <div class="history-list">
+
+                    {% for slip in betting_slips %}
+
+                        <section class="history-card">
+
+                            <div class="history-head">
+
+                                <div class="history-title">
+
+                                    <strong>
+                                        Kupon #{{ slip.id }}
+                                    </strong>
+
+                                    <span>
+                                        {{ slip.created_at.strftime("%d-%m-%Y %H:%M") if slip.created_at else "" }}
+                                    </span>
+
+                                </div>
+
+                                <span class="history-status">
+                                    {{ slip.status }}
+                                </span>
+
+                            </div>
+
+                            {% for pick in slip.picks %}
+
+                                <div class="history-row">
+
+                                    <span class="history-number">
+                                        {{ pick.line_number }}.
+                                    </span>
+
+                                    <strong>
+                                        {{ pick.player_name }}
+                                    </strong>
+
+                                    <span class="history-prediction">
+                                        {% if pick.prediction == "win" %}
+                                            Vinder
+                                        {% else %}
+                                            Taber
+                                        {% endif %}
+                                    </span>
+
+                                    <span
+                                        class="
+                                            history-result
+                                            {{ pick.result or '' }}
+                                        "
+                                    >
+                                        {% if pick.result == "correct" %}
+                                            Rigtig
+                                        {% elif pick.result == "wrong" %}
+                                            Forkert
+                                        {% elif pick.result == "void" %}
+                                            Annulleret
+                                        {% else %}
+                                            Afventer
+                                        {% endif %}
+                                    </span>
+
+                                </div>
+
+                            {% endfor %}
+
+                        </section>
+
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+
+                <div class="empty-history">
+                    Du har ikke lavet nogen kuponer endnu.
+                </div>
+
+            {% endif %}
+
+        </article>
+
+    </section>
+
+</div>
+
+
+<template id="couponRowTemplate">
+
+    <div class="coupon-row">
+
+        <span class="coupon-number"></span>
+
+        <select
+            class="coupon-player"
+            name="badminton_id[]"
+            required
+        >
+
+            <option value="">
+                Vælg spiller
+            </option>
+
+            {% for player in players %}
+
+                <option
+                    value="{{ player.badminton_id }}"
+                >
+                    {{ player.player_name }}
+                    {% if player.gender %}
+                        · {{ player.gender }}
+                    {% endif %}
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+        <label class="coupon-choice choice-win">
+
+            <input
+                type="radio"
+                value="win"
+            >
+
+            <span>
+                Vinder
+            </span>
+
+        </label>
+
+        <label class="coupon-choice choice-loss">
+
+            <input
+                type="radio"
+                value="loss"
+            >
+
+            <span>
+                Taber
+            </span>
+
+        </label>
+
+        <button
+            type="button"
+            class="remove-line"
+            aria-label="Fjern linje"
+            title="Fjern linje"
+        >
+            ×
+        </button>
+
+    </div>
+
+</template>
+
+
+<script>
+
+    (() => {
+
+        const lines =
+            document.getElementById(
+                "couponLines"
+            );
+
+        const template =
+            document.getElementById(
+                "couponRowTemplate"
+            );
+
+        const addButton =
+            document.getElementById(
+                "addCouponLine"
+            );
+
+        const form =
+            document.getElementById(
+                "bettingForm"
+            );
+
+
+        function renumberRows() {
+
+            const rows =
+                lines.querySelectorAll(
+                    ".coupon-row"
+                );
+
+            rows.forEach(
+                (row, index) => {
+
+                    row.querySelector(
+                        ".coupon-number"
+                    ).textContent =
+                        index + 1;
+
+                    row.querySelectorAll(
+                        'input[type="radio"]'
+                    ).forEach(
+                        (radio) => {
+
+                            radio.name =
+                                `prediction_row_${index}`;
+
+                        }
+                    );
+
+                }
+            );
+
+        }
+
+
+        function addRow() {
+
+            const fragment =
+                template.content.cloneNode(
+                    true
+                );
+
+            const row =
+                fragment.querySelector(
+                    ".coupon-row"
+                );
+
+            const hiddenPrediction =
+                document.createElement(
+                    "input"
+                );
+
+            hiddenPrediction.type =
+                "hidden";
+
+            hiddenPrediction.name =
+                "prediction[]";
+
+            hiddenPrediction.value =
+                "";
+
+            row.appendChild(
+                hiddenPrediction
+            );
+
+
+            row.querySelectorAll(
+                'input[type="radio"]'
+            ).forEach(
+                (radio) => {
+
+                    radio.addEventListener(
+                        "change",
+                        () => {
+
+                            hiddenPrediction.value =
+                                radio.value;
+
+                        }
+                    );
+
+                }
+            );
+
+
+            row.querySelector(
+                ".remove-line"
+            ).addEventListener(
+                "click",
+                () => {
+
+                    row.remove();
+
+                    if (
+                        lines.children.length
+                        === 0
+                    ) {
+                        addRow();
+                    }
+
+                    renumberRows();
+
+                }
+            );
+
+
+            lines.appendChild(
+                fragment
+            );
+
+            renumberRows();
+
+        }
+
+
+        addButton.addEventListener(
+            "click",
+            addRow
+        );
+
+
+        form.addEventListener(
+            "submit",
+            (event) => {
+
+                const rows =
+                    lines.querySelectorAll(
+                        ".coupon-row"
+                    );
+
+                const usedPlayers =
+                    new Set();
+
+
+                for (const row of rows) {
+
+                    const player =
+                        row.querySelector(
+                            ".coupon-player"
+                        );
+
+                    const prediction =
+                        row.querySelector(
+                            'input[name="prediction[]"]'
+                        );
+
+
+                    if (
+                        !player.value
+                        ||
+                        !prediction.value
+                    ) {
+
+                        event.preventDefault();
+
+                        alert(
+                            "Alle linjer skal have en spiller og et valg."
+                        );
+
+                        return;
+
+                    }
+
+
+                    if (
+                        usedPlayers.has(
+                            player.value
+                        )
+                    ) {
+
+                        event.preventDefault();
+
+                        alert(
+                            "Samme spiller kan kun vælges én gang på samme kupon."
+                        );
+
+                        return;
+
+                    }
+
+
+                    usedPlayers.add(
+                        player.value
+                    );
+
+                }
+
+            }
+        );
+
+
+        addRow();
+
+    })();
+
+</script>
+
+{% endblock %}

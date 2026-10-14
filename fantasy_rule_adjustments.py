@@ -37,6 +37,10 @@ def ensure_rule_adjustment_table():
                     club_id INT NOT NULL,
                     season_id INT NOT NULL,
 
+                    department NVARCHAR(10) NOT NULL
+                        CONSTRAINT DF_fantasy_rule_adjustment_department
+                        DEFAULT 'SEN',
+
                     gender NVARCHAR(1) NOT NULL,
                     required_count INT NOT NULL,
 
@@ -60,6 +64,16 @@ def ensure_rule_adjustment_table():
                     CONSTRAINT FK_fantasy_rule_adjustment_team
                     FOREIGN KEY (fantasy_team_id)
                     REFERENCES dbo.fantasy_teams(id),
+
+                    CONSTRAINT CK_fantasy_rule_adjustment_department
+                    CHECK (
+                        department IN (
+                            'SEN',
+                            'U',
+                            'MOT',
+                            'VET'
+                        )
+                    ),
 
                     CONSTRAINT CK_fantasy_rule_adjustment_gender
                     CHECK (gender IN ('M', 'K')),
@@ -115,6 +129,7 @@ def ensure_rule_adjustment_table():
                     IX_fantasy_rule_adjustments_deadline
                 ON dbo.fantasy_team_rule_adjustments (
                     club_id,
+                    department,
                     season_id,
                     status,
                     deadline_at
@@ -152,21 +167,30 @@ def _next_match_time(
     cursor,
     club_id,
     season_id,
+    department,
     after_time,
 ):
     cursor.execute(
         """
         SELECT MIN(match_time)
 
-        FROM dbo.club_matches
+        FROM dbo.club_matches cm
+
+        INNER JOIN dbo.club_dashboard_teams cdt
+            ON cdt.club_id = cm.club_id
+            AND cdt.season_id = cm.season_id
+            AND cdt.league_group_id = cm.league_group_id
+            AND cdt.team_name = cm.club_team_name
 
         WHERE
-            club_id = ?
-            AND season_id = ?
-            AND match_time > ?
+            cm.club_id = ?
+            AND cm.season_id = ?
+            AND cdt.department = ?
+            AND cm.match_time > ?
         """,
         club_id,
         season_id,
+        department,
         after_time,
     )
 
@@ -219,6 +243,7 @@ def _load_adjustment(
             fantasy_team_id,
             club_id,
             season_id,
+            department,
             gender,
             required_count,
             direction,
@@ -550,6 +575,7 @@ def create_rule_adjustments_for_active_teams(
     cursor,
     club_id,
     season_id,
+    department,
     male_required,
     female_required,
     changed_at=None,
@@ -573,6 +599,7 @@ def create_rule_adjustments_for_active_teams(
             cursor=cursor,
             club_id=club_id,
             season_id=season_id,
+            department=department,
             after_time=changed_at,
         )
     )
@@ -586,10 +613,12 @@ def create_rule_adjustments_for_active_teams(
         WHERE
             club_id = ?
             AND season_id = ?
+            AND department = ?
             AND status = 'active'
         """,
         club_id,
         season_id,
+        department,
     )
 
     team_ids = [
@@ -683,6 +712,7 @@ def create_rule_adjustments_for_active_teams(
                     fantasy_team_id,
                     club_id,
                     season_id,
+                    department,
                     gender,
                     required_count,
                     direction,
@@ -704,12 +734,14 @@ def create_rule_adjustments_for_active_teams(
                     ?,
                     ?,
                     ?,
+                    ?,
                     'pending'
                 )
                 """,
                 fantasy_team_id,
                 club_id,
                 season_id,
+                department,
                 gender,
                 required_count,
                 direction,
@@ -762,6 +794,7 @@ def get_pending_rule_adjustments(
             fantasy_team_id,
             club_id,
             season_id,
+            department,
             gender,
             required_count,
             direction,
@@ -807,6 +840,7 @@ def get_pending_rule_adjustments(
                     cursor=cursor,
                     club_id=row.club_id,
                     season_id=row.season_id,
+                    department=row.department,
                     after_time=
                         row.rule_changed_at,
                 )
@@ -1260,6 +1294,7 @@ def enforce_due_rule_adjustments(
     cursor,
     club_id,
     season_id,
+    department,
     as_of,
     infer_null_deadline=False,
 ):
@@ -1285,6 +1320,7 @@ def enforce_due_rule_adjustments(
             WHERE
                 club_id = ?
                 AND season_id = ?
+                AND department = ?
                 AND status = 'pending'
                 AND direction = 'remove'
                 AND deadline_at IS NULL
@@ -1292,6 +1328,7 @@ def enforce_due_rule_adjustments(
             """,
             club_id,
             season_id,
+            department,
             as_of,
         )
 
@@ -1305,6 +1342,7 @@ def enforce_due_rule_adjustments(
                     cursor=cursor,
                     club_id=club_id,
                     season_id=season_id,
+                    department=department,
                     after_time=
                         row.rule_changed_at,
                 )
@@ -1344,6 +1382,7 @@ def enforce_due_rule_adjustments(
         WHERE
             club_id = ?
             AND season_id = ?
+            AND department = ?
             AND status = 'pending'
             AND direction = 'remove'
             AND deadline_at IS NOT NULL
@@ -1355,6 +1394,7 @@ def enforce_due_rule_adjustments(
         """,
         club_id,
         season_id,
+        department,
         as_of,
     )
 

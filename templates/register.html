@@ -8,8 +8,8 @@
             <span class="pill">KOM GODT I GANG</span>
             <h1>Din klub følger<br><span>med din profil.</span></h1>
             <p class="hero-copy">
-                Opret din profil og vælg den klub, du spiller for.
-                Derefter lander du direkte i klubbens univers, hver gang du logger ind.
+                Opret din profil, vælg din klub og den afdeling du hører til.
+                Derefter lander du direkte i dit eget klubunivers, hver gang du logger ind.
             </p>
         </div>
 
@@ -21,18 +21,20 @@
                     <small>Navn, email og password</small>
                 </div>
             </div>
+
             <div class="setup-step">
                 <span>2</span>
                 <div>
-                    <strong>Vælg klub</strong>
-                    <small>Søg direkte i klubdatabasen</small>
+                    <strong>Vælg klub & afdeling</strong>
+                    <small>Senior, Ungdom, Motionist eller Veteran</small>
                 </div>
             </div>
+
             <div class="setup-step">
                 <span>3</span>
                 <div>
                     <strong>Klar</strong>
-                    <small>Du sendes direkte til din klub</small>
+                    <small>Du sendes direkte til dit klubunivers</small>
                 </div>
             </div>
         </div>
@@ -91,6 +93,90 @@
                     <div id="club-results" class="club-results"></div>
                 </div>
 
+                <div class="club-field department-field">
+                    <label class="field">
+                        <span>Afdeling</span>
+
+                        <div class="search-input-wrap">
+                            <input
+                                id="department-search"
+                                type="text"
+                                placeholder="Vælg afdeling..."
+                                autocomplete="off"
+                                readonly
+                                required
+                            >
+                        </div>
+                    </label>
+
+                    <input
+                        type="hidden"
+                        name="department"
+                        id="department-value"
+                    >
+
+                    <div
+                        id="department-results"
+                        class="club-results"
+                    >
+                        <button
+                            type="button"
+                            class="club-result department-option"
+                            data-value="SEN"
+                            data-label="Senior"
+                        >
+                            <span class="club-result-icon">S</span>
+                            <div>
+                                <strong>Senior</strong>
+                                <small>Vælg Senior</small>
+                            </div>
+                            <span class="club-result-arrow">→</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="club-result department-option"
+                            data-value="U"
+                            data-label="Ungdom"
+                        >
+                            <span class="club-result-icon">U</span>
+                            <div>
+                                <strong>Ungdom</strong>
+                                <small>Vælg Ungdom</small>
+                            </div>
+                            <span class="club-result-arrow">→</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="club-result department-option"
+                            data-value="MOT"
+                            data-label="Motionist"
+                        >
+                            <span class="club-result-icon">M</span>
+                            <div>
+                                <strong>Motionist</strong>
+                                <small>Vælg Motionist</small>
+                            </div>
+                            <span class="club-result-arrow">→</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="club-result department-option"
+                            data-value="VET"
+                            data-label="Veteran"
+                        >
+                            <span class="club-result-icon">V</span>
+                            <div>
+                                <strong>Veteran</strong>
+                                <small>Vælg Veteran</small>
+                            </div>
+                            <span class="club-result-arrow">→</span>
+                        </button>
+                    </div>
+                </div>
+
                 <div class="two-columns">
                     <label class="field">
                         <span>Password</span>
@@ -136,6 +222,11 @@ const searchInput = document.getElementById("club-search");
 const clubIdInput = document.getElementById("club-id");
 const resultsBox = document.getElementById("club-results");
 const registerForm = document.getElementById("register-form");
+
+const departmentSearch = document.getElementById("department-search");
+const departmentValue = document.getElementById("department-value");
+const departmentResults = document.getElementById("department-results");
+const departmentOptions = document.querySelectorAll(".department-option");
 
 let timeout = null;
 
@@ -211,6 +302,23 @@ searchInput.addEventListener("input", () => {
     }, 150);
 });
 
+departmentSearch.addEventListener("click", () => {
+    departmentResults.classList.toggle("show");
+});
+
+departmentSearch.addEventListener("focus", () => {
+    departmentResults.classList.add("show");
+});
+
+departmentOptions.forEach(option => {
+    option.addEventListener("click", () => {
+        departmentValue.value = option.dataset.value;
+        departmentSearch.value = option.dataset.label;
+        departmentSearch.classList.add("selected");
+        departmentResults.classList.remove("show");
+    });
+});
+
 function escapeHtml(value) {
     const div = document.createElement("div");
     div.textContent = value;
@@ -218,17 +326,35 @@ function escapeHtml(value) {
 }
 
 document.addEventListener("click", event => {
-    if (!event.target.closest(".club-field")) {
+    if (!event.target.closest(".club-field:not(.department-field)")) {
         hideResults();
+    }
+
+    if (!event.target.closest(".department-field")) {
+        departmentResults.classList.remove("show");
     }
 });
 
 registerForm.addEventListener("submit", event => {
+    let hasError = false;
+
     if (!clubIdInput.value) {
         event.preventDefault();
         searchInput.classList.add("field-error");
         searchInput.focus();
         searchInput.placeholder = "Vælg en klub fra listen";
+        hasError = true;
+    }
+
+    if (!departmentValue.value) {
+        event.preventDefault();
+        departmentSearch.classList.add("field-error");
+
+        if (!hasError) {
+            departmentSearch.focus();
+        }
+
+        departmentSearch.placeholder = "Vælg en afdeling";
     }
 });
 </script>

@@ -5,6 +5,13 @@ Statistik · {{ club.name }}
 {% endblock %}
 
 {% block content %}
+{% set department_names = {
+    "SEN": "Senior",
+    "U": "Ungdom",
+    "MOT": "Motionist",
+    "VET": "Veteran"
+} %}
+
 
 <style>
 
@@ -180,6 +187,99 @@ Statistik · {{ club.name }}
         font-size: 10px;
     }
 
+
+    /* =====================================================
+       EXPANDABLE TOP LISTS
+       ===================================================== */
+
+    .highlight-ranking-row.is-extra {
+        display: none;
+    }
+
+    .highlight-card.is-expanded
+    .highlight-ranking-row.is-extra {
+        display: grid;
+    }
+
+    .highlight-expand-button {
+        width: 100%;
+        margin-top: 10px;
+        padding: 8px 10px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+
+        border: 0;
+        border-top: 1px solid rgba(255,255,255,.06);
+
+        background: transparent;
+        color: var(--muted);
+
+        font: inherit;
+        font-size: 10px;
+        font-weight: 800;
+
+        cursor: pointer;
+    }
+
+    .highlight-expand-button:hover {
+        color: inherit;
+    }
+
+    .highlight-expand-arrow {
+        display: inline-block;
+        font-size: 12px;
+        line-height: 1;
+        transition: transform .18s ease;
+    }
+
+    .highlight-card.is-expanded
+    .highlight-expand-arrow {
+        transform: rotate(180deg);
+    }
+
+
+    .highlight-collapse-top {
+        display: none;
+    }
+
+    .highlight-card.is-expanded
+    .highlight-collapse-top {
+        position: sticky;
+        top: 10px;
+        z-index: 30;
+
+        width: 100%;
+        margin: 0 0 10px;
+        padding: 8px 10px;
+
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+
+        border: 1px solid rgba(255,255,255,.10);
+        border-radius: 10px;
+
+        background: #0b1625;
+        color: var(--muted);
+
+        font: inherit;
+        font-size: 10px;
+        font-weight: 800;
+
+        cursor: pointer;
+
+        box-shadow:
+            0 8px 18px rgba(0,0,0,.18);
+    }
+
+    .highlight-card.is-expanded
+    .highlight-collapse-top {
+        display: flex;
+    }
+
     /* =====================================================
        CONTENT GRID
        ===================================================== */
@@ -263,6 +363,30 @@ Statistik · {{ club.name }}
         background: white;
         color: #07111f;
         border-color: white;
+    }
+
+
+    .statistics-export-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 38px;
+        padding: 9px 13px;
+        border-radius: 9px;
+        border: 1px solid rgba(255,255,255,.10);
+        background: rgba(255,255,255,.04);
+        color: inherit;
+        font-size: 12px;
+        font-weight: 800;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .statistics-export-button:hover {
+        border-color: rgba(94,234,212,.28);
+        background: rgba(94,234,212,.08);
+        color: var(--accent);
     }
 
     /* =====================================================
@@ -541,6 +665,11 @@ Statistik · {{ club.name }}
             width: 100%;
         }
 
+
+        .statistics-export-button {
+            width: 100%;
+        }
+
         .filter-button {
             flex: 1;
         }
@@ -733,6 +862,7 @@ Statistik · {{ club.name }}
 
             <p>
                 {{ club.name }}
+                · {{ department_names.get(current_user.department, current_user.department) }}
             </p>
 
         </div>
@@ -751,21 +881,80 @@ Statistik · {{ club.name }}
     <section class="highlight-grid">
 
         <!-- POINTKONGE -->
+
         <article class="highlight-card">
 
             <span class="highlight-kicker">
                 Pointkonge
             </span>
 
-            {% if highlights.point_leader %}
+            {% if highlights.point_ranking %}
 
-                <strong class="highlight-name">
-                    {{ highlights.point_leader.player_name }}
-                </strong>
+                <button
+                    type="button"
+                    class="highlight-collapse-top"
+                    data-highlight-toggle
+                    aria-expanded="true"
+                >
+                    <span>
+                        Luk liste
+                    </span>
 
-                <span class="highlight-stat">
-                    {{ highlights.point_leader.fantasy_points }} point
-                </span>
+                    <span>
+                        ↑
+                    </span>
+                </button>
+
+                <div class="highlight-ranking">
+
+                    {% for player in highlights.point_ranking %}
+
+                        <div class="highlight-ranking-row{% if loop.index > 3 %} is-extra{% endif %}">
+
+                            <span class="highlight-rank">
+                                {{ loop.index }}.
+                            </span>
+
+                            <div class="highlight-ranking-name">
+
+                                <strong>
+                                    {{ player.player_name }}
+                                </strong>
+
+                                <small>
+                                    {{ player.wins }} sejre
+                                </small>
+
+                            </div>
+
+                            <strong class="highlight-ranking-value">
+                                {{ player.fantasy_points }} p
+                            </strong>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+                {% if highlights.point_ranking|length > 3 %}
+
+                    <button
+                        type="button"
+                        class="highlight-expand-button"
+                        data-highlight-toggle
+                        aria-expanded="false"
+                    >
+                        <span class="highlight-expand-label">
+                            Vis hele listen
+                        </span>
+
+                        <span class="highlight-expand-arrow">
+                            ↓
+                        </span>
+                    </button>
+
+                {% endif %}
 
             {% else %}
 
@@ -787,11 +976,26 @@ Statistik · {{ club.name }}
 
             {% if highlights.most_wins %}
 
+                <button
+                    type="button"
+                    class="highlight-collapse-top"
+                    data-highlight-toggle
+                    aria-expanded="true"
+                >
+                    <span>
+                        Luk liste
+                    </span>
+
+                    <span>
+                        ↑
+                    </span>
+                </button>
+
                 <div class="highlight-ranking">
 
                     {% for player in highlights.most_wins %}
 
-                        <div class="highlight-ranking-row">
+                        <div class="highlight-ranking-row{% if loop.index > 3 %} is-extra{% endif %}">
 
                             <span class="highlight-rank">
                                 {{ loop.index }}.
@@ -821,6 +1025,25 @@ Statistik · {{ club.name }}
 
                 </div>
 
+                {% if highlights.most_wins|length > 3 %}
+
+                    <button
+                        type="button"
+                        class="highlight-expand-button"
+                        data-highlight-toggle
+                        aria-expanded="false"
+                    >
+                        <span class="highlight-expand-label">
+                            Vis hele listen
+                        </span>
+
+                        <span class="highlight-expand-arrow">
+                            ↓
+                        </span>
+                    </button>
+
+                {% endif %}
+
             {% else %}
 
                 <span class="highlight-stat">
@@ -841,11 +1064,26 @@ Statistik · {{ club.name }}
 
             {% if highlights.best_win_rate %}
 
+                <button
+                    type="button"
+                    class="highlight-collapse-top"
+                    data-highlight-toggle
+                    aria-expanded="true"
+                >
+                    <span>
+                        Luk liste
+                    </span>
+
+                    <span>
+                        ↑
+                    </span>
+                </button>
+
                 <div class="highlight-ranking">
 
                     {% for player in highlights.best_win_rate %}
 
-                        <div class="highlight-ranking-row">
+                        <div class="highlight-ranking-row{% if loop.index > 3 %} is-extra{% endif %}">
 
                             <span class="highlight-rank">
                                 {{ loop.index }}.
@@ -873,6 +1111,25 @@ Statistik · {{ club.name }}
 
                 </div>
 
+                {% if highlights.best_win_rate|length > 3 %}
+
+                    <button
+                        type="button"
+                        class="highlight-expand-button"
+                        data-highlight-toggle
+                        aria-expanded="false"
+                    >
+                        <span class="highlight-expand-label">
+                            Vis hele listen
+                        </span>
+
+                        <span class="highlight-expand-arrow">
+                            ↓
+                        </span>
+                    </button>
+
+                {% endif %}
+
                 <span class="highlight-footnote">
                     Min. 3 kampe
                 </span>
@@ -888,20 +1145,35 @@ Statistik · {{ club.name }}
         </article>
 
 
-        <!-- FANTASY-STILLING -->
-        <article class="highlight-card fantasy-highlight">
+        <!-- 3-SÆTSKAMPE -->
+        <article class="highlight-card">
 
             <span class="highlight-kicker">
-                Fantasy-stilling
+                3-sætskampe
             </span>
 
-            {% if fantasy_leaderboard %}
+            {% if highlights.best_three_set_rate %}
+
+                <button
+                    type="button"
+                    class="highlight-collapse-top"
+                    data-highlight-toggle
+                    aria-expanded="true"
+                >
+                    <span>
+                        Luk liste
+                    </span>
+
+                    <span>
+                        ↑
+                    </span>
+                </button>
 
                 <div class="highlight-ranking">
 
-                    {% for team in fantasy_leaderboard[:3] %}
+                    {% for player in highlights.best_three_set_rate %}
 
-                        <div class="highlight-ranking-row">
+                        <div class="highlight-ranking-row{% if loop.index > 3 %} is-extra{% endif %}">
 
                             <span class="highlight-rank">
                                 {{ loop.index }}.
@@ -910,17 +1182,18 @@ Statistik · {{ club.name }}
                             <div class="highlight-ranking-name">
 
                                 <strong>
-                                    {{ team.team_name }}
+                                    {{ player.player_name }}
                                 </strong>
 
                                 <small>
-                                    {{ team.owner_name }}
+                                    {{ player.three_set_matches }} af {{ player.matches_played }} kampe ·
+                                    {{ "%.1f"|format(player.three_set_match_percentage) }} % går i 3 sæt
                                 </small>
 
                             </div>
 
                             <strong class="highlight-ranking-value">
-                                {{ "%.0f"|format(team.points) }} p
+                                {{ "%.1f"|format(player.three_set_win_percentage) }} % vundet
                             </strong>
 
                         </div>
@@ -929,10 +1202,33 @@ Statistik · {{ club.name }}
 
                 </div>
 
+                {% if highlights.best_three_set_rate|length > 3 %}
+
+                    <button
+                        type="button"
+                        class="highlight-expand-button"
+                        data-highlight-toggle
+                        aria-expanded="false"
+                    >
+                        <span class="highlight-expand-label">
+                            Vis hele listen
+                        </span>
+
+                        <span class="highlight-expand-arrow">
+                            ↓
+                        </span>
+                    </button>
+
+                {% endif %}
+
+                <span class="highlight-footnote">
+                    Rangering: andel af alle kampe der går i 3 sæt · Til højre: sejrsprocent i de kampe
+                </span>
+
             {% else %}
 
                 <span class="highlight-stat">
-                    Ingen aktive fantasy-hold
+                    Ingen 3-sætskampe endnu
                 </span>
 
             {% endif %}
@@ -1009,6 +1305,14 @@ Statistik · {{ club.name }}
 
                 </div>
 
+                <a
+                    class="statistics-export-button"
+                    href="{{ url_for('download_statistics_xlsx') }}"
+                >
+                    <span aria-hidden="true">↓</span>
+                    Download Excel
+                </a>
+
             </div>
 
 
@@ -1045,9 +1349,16 @@ Statistik · {{ club.name }}
                             </th>
 
                             <th>
-                                3-sætssejre %
+                                3 sæt %
                                 <span class="stat-help">
-                                    Andel af sejre
+                                    Andel af alle kampe
+                                </span>
+                            </th>
+
+                            <th>
+                                3-sæts sejr %
+                                <span class="stat-help">
+                                    Af 3-sætskampene
                                 </span>
                             </th>
 
@@ -1169,6 +1480,14 @@ Statistik · {{ club.name }}
                                 </td>
 
                                 <td class="numeric-cell">
+                                    {% if player.three_set_match_percentage is not none %}
+                                        {{ "%.1f"|format(player.three_set_match_percentage) }} %
+                                    {% else %}
+                                        –
+                                    {% endif %}
+                                </td>
+
+                                <td class="numeric-cell">
                                     {% if player.three_set_win_percentage is not none %}
                                         {{ "%.1f"|format(player.three_set_win_percentage) }} %
                                     {% else %}
@@ -1246,7 +1565,7 @@ Statistik · {{ club.name }}
 
                             <tr>
                                 <td
-                                    colspan="18"
+                                    colspan="19"
                                     class="empty-state"
                                 >
                                     Ingen spillere fundet.
@@ -1286,6 +1605,66 @@ Statistik · {{ club.name }}
             );
 
         let selectedGender = "all";
+
+
+        const highlightToggleButtons =
+            document.querySelectorAll(
+                "[data-highlight-toggle]"
+            );
+
+        highlightToggleButtons.forEach(
+            (button) => {
+
+                button.addEventListener(
+                    "click",
+                    () => {
+
+                        const card =
+                            button.closest(
+                                ".highlight-card"
+                            );
+
+                        if (!card) {
+                            return;
+                        }
+
+                        const isExpanded =
+                            card.classList.toggle(
+                                "is-expanded"
+                            );
+
+                        card.querySelectorAll(
+                            "[data-highlight-toggle]"
+                        ).forEach(
+                            (cardButton) => {
+
+                                cardButton.setAttribute(
+                                    "aria-expanded",
+                                    isExpanded
+                                        ? "true"
+                                        : "false"
+                                );
+
+                                const label =
+                                    cardButton.querySelector(
+                                        ".highlight-expand-label"
+                                    );
+
+                                if (label) {
+                                    label.textContent =
+                                        isExpanded
+                                            ? "Vis top 3"
+                                            : "Vis hele listen";
+                                }
+
+                            }
+                        );
+
+                    }
+                );
+
+            }
+        );
 
 
         function applyFilters() {

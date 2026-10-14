@@ -59,6 +59,10 @@
 
     <style>
 
+        .mobile-logout-link {
+            display: none !important;
+        }
+
         @media (max-width: 820px) {
 
             .header-inner {
@@ -111,6 +115,13 @@
                 justify-content: center !important;
 
                 white-space: nowrap !important;
+            }
+
+            .main-nav .mobile-logout-link {
+                display: inline-flex !important;
+                border: 1px solid rgba(255, 143, 143, 0.22);
+                background: rgba(255, 143, 143, 0.06);
+                color: #ffb3b3;
             }
 
             .header-user {
@@ -201,7 +212,9 @@
                     >
                         Pointsystem
                     </a>
-
+                                    <a href="{{ url_for('betting') }}">
+                    Betting
+                </a>
                     <a
                         href="{{ url_for('players') }}"
                         class="{% if request.endpoint == 'players' %}active{% endif %}"
@@ -241,21 +254,18 @@
                         Admin
                     </a>
 
-                    <a
-                        href="{{ url_for('admin_fantasy_teams') }}"
-                        class="{% if request.endpoint == 'admin_fantasy_teams' %}active{% endif %}"
-                    >
-                        Fantasyhold
-                    </a>
+                    
 
-                    <a
-                        href="{{ url_for('admin_team_builder') }}"
-                        class="{% if request.endpoint == 'admin_team_builder' %}active{% endif %}"
-                    >
-                        Holdbygning
-                    </a>
+                    
 
                     {% endif %}
+
+                    <a
+                        class="mobile-logout-link"
+                        href="{{ url_for('logout') }}"
+                    >
+                        Log ud
+                    </a>
 
                 </nav>
 
@@ -291,15 +301,24 @@
 
                             <small>
 
+                                {% set department_names = {
+                                    "SEN": "Senior",
+                                    "U": "Ungdom",
+                                    "MOT": "Motionist",
+                                    "VET": "Veteran"
+                                } %}
+
                                 {% if current_user.club_role == "admin" %}
-
                                     Administrator
-
                                 {% else %}
-
                                     Medlem
-
                                 {% endif %}
+
+                                ·
+                                {{ department_names.get(
+                                    current_user.department,
+                                    current_user.department
+                                ) }}
 
                             </small>
 
