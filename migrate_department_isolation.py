@@ -457,16 +457,17 @@ def migrate_department_isolation():
         # -----------------------------------------------------
         # Department player view
         #
-        # A club player belongs to a department when the player
-        # has appeared in a match for one of that department's
-        # teams. App queries can fall back to the full club roster
-        # when a department has no match history yet.
+        # Eligibility comes from the latest ranking class, not
+        # from whether the player has already played a match.
+        #
+        # SEN = U17 + U19 + SEN
+        # U   = remaining youth classes
+        # MOT = MOT
+        # VET = VET + SEN+50
         # -----------------------------------------------------
         if (
-            _table_exists(cursor, "club_dashboard_teams")
-            and _table_exists(cursor, "club_matches")
-            and _table_exists(cursor, "club_match_games")
-            and _table_exists(cursor, "club_match_game_players")
+            _table_exists(cursor, "club_players")
+            and _table_exists(cursor, "player_rankings")
         ):
             cursor.execute(
                 """
@@ -475,29 +476,63 @@ def migrate_department_isolation():
                 AS
 
                 SELECT DISTINCT
-                    cm.club_id,
-                    cm.season_id,
-                    cdt.department,
-                    gp.badminton_id
+                    cp.club_id,
+                    cp.season_id,
+                    mapped.department,
+                    cp.badminton_id
 
-                FROM dbo.club_match_game_players gp
+                FROM dbo.club_players cp
 
-                INNER JOIN dbo.club_match_games g
-                    ON g.id = gp.game_id
+                OUTER APPLY (
+                    SELECT TOP 1
+                        UPPER(
+                            LTRIM(
+                                RTRIM(
+                                    COALESCE(
+                                        pr.ranking_class,
+                                        ''
+                                    )
+                                )
+                            )
+                        ) AS ranking_class
 
-                INNER JOIN dbo.club_matches cm
-                    ON cm.id = g.club_match_id
+                    FROM dbo.player_rankings pr
 
-                INNER JOIN dbo.club_dashboard_teams cdt
-                    ON cdt.club_id = cm.club_id
-                    AND cdt.season_id = cm.season_id
-                    AND cdt.league_group_id =
-                        cm.league_group_id
-                    AND cdt.team_name =
-                        cm.club_team_name
+                    WHERE
+                        pr.badminton_id = cp.badminton_id
+                        AND pr.club_id = cp.club_id
+                        AND pr.season_id = cp.season_id
+
+                    ORDER BY pr.id DESC
+                ) latest
+
+                CROSS APPLY (
+                    SELECT
+                        CASE
+                            WHEN
+                                latest.ranking_class LIKE 'SEN+50%'
+                                OR latest.ranking_class LIKE 'VET%'
+                            THEN 'VET'
+
+                            WHEN
+                                latest.ranking_class LIKE 'U17%'
+                                OR latest.ranking_class LIKE 'U19%'
+                                OR latest.ranking_class LIKE 'SEN%'
+                            THEN 'SEN'
+
+                            WHEN latest.ranking_class LIKE 'MOT%'
+                            THEN 'MOT'
+
+                            WHEN latest.ranking_class LIKE 'U%'
+                            THEN 'U'
+
+                            ELSE NULL
+                        END AS department
+                ) mapped
 
                 WHERE
-                    gp.badminton_id IS NOT NULL
+                    cp.is_active = 1
+                    AND mapped.department IS NOT NULL
                 """
             )
 

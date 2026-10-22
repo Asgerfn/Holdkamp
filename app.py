@@ -760,25 +760,15 @@ def players():
 
                 AND cp.is_active = 1
 
-                AND (
-                    EXISTS (
-                        SELECT 1
-                        FROM dbo.v_department_players dp
-                        WHERE
-                            dp.club_id = cp.club_id
-                            AND dp.season_id = cp.season_id
-                            AND dp.department = ?
-                            AND dp.badminton_id =
-                                cp.badminton_id
-                    )
-                    OR NOT EXISTS (
-                        SELECT 1
-                        FROM dbo.v_department_players dp
-                        WHERE
-                            dp.club_id = cp.club_id
-                            AND dp.season_id = cp.season_id
-                            AND dp.department = ?
-                    )
+                AND EXISTS (
+                    SELECT 1
+                    FROM dbo.v_department_players dp
+                    WHERE
+                        dp.club_id = cp.club_id
+                        AND dp.season_id = cp.season_id
+                        AND dp.department = ?
+                        AND dp.badminton_id =
+                            cp.badminton_id
                 )
 
 
@@ -801,7 +791,6 @@ def players():
             current_user.department,
             current_user.club_id,
             CURRENT_SEASON,
-            current_user.department,
             current_user.department
         )
 
@@ -2416,25 +2405,15 @@ def my_team():
 
                 AND cp.is_active = 1
 
-                AND (
-                    EXISTS (
-                        SELECT 1
-                        FROM dbo.v_department_players dp
-                        WHERE
-                            dp.club_id = cp.club_id
-                            AND dp.season_id = cp.season_id
-                            AND dp.department = ?
-                            AND dp.badminton_id =
-                                cp.badminton_id
-                    )
-                    OR NOT EXISTS (
-                        SELECT 1
-                        FROM dbo.v_department_players dp
-                        WHERE
-                            dp.club_id = cp.club_id
-                            AND dp.season_id = cp.season_id
-                            AND dp.department = ?
-                    )
+                AND EXISTS (
+                    SELECT 1
+                    FROM dbo.v_department_players dp
+                    WHERE
+                        dp.club_id = cp.club_id
+                        AND dp.season_id = cp.season_id
+                        AND dp.department = ?
+                        AND dp.badminton_id =
+                            cp.badminton_id
                 )
 
 
@@ -2492,8 +2471,6 @@ def my_team():
             current_user.club_id,
 
             CURRENT_SEASON,
-
-            current_user.department,
 
             current_user.department
 
@@ -7339,24 +7316,14 @@ def dashboard():
                 AND cp.season_id = ?
                 AND cp.is_active = 1
                 AND p.gender = 'M'
-                AND (
-                    EXISTS (
-                        SELECT 1
-                        FROM dbo.v_department_players dp
-                        WHERE
-                            dp.club_id = cp.club_id
-                            AND dp.season_id = cp.season_id
-                            AND dp.department = ?
-                            AND dp.badminton_id = cp.badminton_id
-                    )
-                    OR NOT EXISTS (
-                        SELECT 1
-                        FROM dbo.v_department_players dp
-                        WHERE
-                            dp.club_id = cp.club_id
-                            AND dp.season_id = cp.season_id
-                            AND dp.department = ?
-                    )
+                AND EXISTS (
+                    SELECT 1
+                    FROM dbo.v_department_players dp
+                    WHERE
+                        dp.club_id = cp.club_id
+                        AND dp.season_id = cp.season_id
+                        AND dp.department = ?
+                        AND dp.badminton_id = cp.badminton_id
                 )
 
             GROUP BY
@@ -7370,7 +7337,6 @@ def dashboard():
             current_user.department,
             current_user.club_id,
             CURRENT_SEASON,
-            current_user.department,
             current_user.department
         )
 
@@ -7404,24 +7370,14 @@ def dashboard():
                 AND cp.season_id = ?
                 AND cp.is_active = 1
                 AND p.gender = 'K'
-                AND (
-                    EXISTS (
-                        SELECT 1
-                        FROM dbo.v_department_players dp
-                        WHERE
-                            dp.club_id = cp.club_id
-                            AND dp.season_id = cp.season_id
-                            AND dp.department = ?
-                            AND dp.badminton_id = cp.badminton_id
-                    )
-                    OR NOT EXISTS (
-                        SELECT 1
-                        FROM dbo.v_department_players dp
-                        WHERE
-                            dp.club_id = cp.club_id
-                            AND dp.season_id = cp.season_id
-                            AND dp.department = ?
-                    )
+                AND EXISTS (
+                    SELECT 1
+                    FROM dbo.v_department_players dp
+                    WHERE
+                        dp.club_id = cp.club_id
+                        AND dp.season_id = cp.season_id
+                        AND dp.department = ?
+                        AND dp.badminton_id = cp.badminton_id
                 )
 
             GROUP BY
@@ -7435,7 +7391,6 @@ def dashboard():
             current_user.department,
             current_user.club_id,
             CURRENT_SEASON,
-            current_user.department,
             current_user.department
         )
 
@@ -8995,24 +8950,14 @@ def betting():
                 cp.club_id = ?
                 AND cp.season_id = ?
                 AND cp.is_active = 1
-                AND (
-                    EXISTS (
-                        SELECT 1
-                        FROM dbo.v_department_players dp
-                        WHERE
-                            dp.club_id = cp.club_id
-                            AND dp.season_id = cp.season_id
-                            AND dp.department = ?
-                            AND dp.badminton_id = cp.badminton_id
-                    )
-                    OR NOT EXISTS (
-                        SELECT 1
-                        FROM dbo.v_department_players dp
-                        WHERE
-                            dp.club_id = cp.club_id
-                            AND dp.season_id = cp.season_id
-                            AND dp.department = ?
-                    )
+                AND EXISTS (
+                    SELECT 1
+                    FROM dbo.v_department_players dp
+                    WHERE
+                        dp.club_id = cp.club_id
+                        AND dp.season_id = cp.season_id
+                        AND dp.department = ?
+                        AND dp.badminton_id = cp.badminton_id
                 )
 
             ORDER BY
@@ -9020,7 +8965,6 @@ def betting():
             """,
             current_user.club_id,
             CURRENT_SEASON,
-            current_user.department,
             current_user.department,
         )
 

@@ -85,7 +85,12 @@ def player_matches_department(player, department):
         )
 
     if department == "U":
-        return bool(re.match(r"^U\d+", ranking_class))
+        return (
+            bool(re.match(r"^U\d+", ranking_class))
+            and not bool(
+                re.match(r"^U(?:17|19)", ranking_class)
+            )
+        )
 
     if department == "MOT":
         return ranking_class.startswith("MOT")
@@ -117,7 +122,11 @@ def _department_ranking_sql(department):
 
     if department == "U":
         return """
-            UPPER(LTRIM(RTRIM(COALESCE(pr.ranking_class, '')))) LIKE 'U[0-9]%'
+            (
+                UPPER(LTRIM(RTRIM(COALESCE(pr.ranking_class, '')))) LIKE 'U[0-9]%'
+                AND UPPER(LTRIM(RTRIM(COALESCE(pr.ranking_class, '')))) NOT LIKE 'U17%'
+                AND UPPER(LTRIM(RTRIM(COALESCE(pr.ranking_class, '')))) NOT LIKE 'U19%'
+            )
         """
 
     if department == "MOT":
